@@ -4,6 +4,8 @@ import (
 	"github.com/streadway/amqp"
 )
 
+// Consumer interface provides functionality of rabbit entity Declaring
+// and queue consuming.
 type Consumer interface {
 	// Declare used to declare any rabbitmq entity.
 	// Will be called once before Consume.

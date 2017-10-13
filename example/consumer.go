@@ -70,6 +70,8 @@ func (c *Consumer) Consume(ch *amqp.Channel) error {
 		content := string(msg.Body)
 
 		fmt.Println(content)
+
+		msg.Ack(false)
 	}
 
 	return nil

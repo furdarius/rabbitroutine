@@ -177,9 +177,7 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 				case <-consumeCtx.Done():
 					err = consumeCtx.Err()
 				case amqpErr := <-closeCh:
-					fmt.Println(amqpErr)
-					err = errors.New("amqp error")
-					//err = errors.Errorf("amqp error: %s (%d)", amqpErr.Reason, amqpErr.Code)
+					err = amqpErr
 				}
 
 				closeErr := consumeChannel.Close()

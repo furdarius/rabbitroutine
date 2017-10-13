@@ -52,6 +52,7 @@ func main() {
 
 	g.Go(func() error {
 		log.Println("signal trap starting")
+		defer log.Println("signal trap finished")
 
 		return TermSignalTrap(ctx)
 	})
