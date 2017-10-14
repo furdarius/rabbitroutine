@@ -1,3 +1,5 @@
+<p align="center"><img src="https://habrastorage.org/webt/59/e2/71/59e271948a792190098780.png"></p>
+
 [![GoDoc](https://godoc.org/github.com/Furdarius/rabbitroutine?status.svg)](https://godoc.org/github.com/Furdarius/rabbitroutine)
 
 # Rabbitmq Failover Routine For You

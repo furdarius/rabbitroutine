@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"context"
 
 	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
@@ -12,7 +13,7 @@ type Consumer struct {
 	QueueName    string
 }
 
-func (c *Consumer) Declare(ch *amqp.Channel) error {
+func (c *Consumer) Declare(ctx context.Context, ch *amqp.Channel) error {
 	err := ch.ExchangeDeclare(
 		c.ExchangeName, // name
 		"direct",       // type
@@ -52,7 +53,16 @@ func (c *Consumer) Declare(ch *amqp.Channel) error {
 	return nil
 }
 
-func (c *Consumer) Consume(ch *amqp.Channel) error {
+func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
+	err := ch.Qos(
+		1,     // prefetch count
+		0,     // prefetch size
+		false, // global
+	)
+	if err != nil {
+		return errors.WithMessage(err, "failed to set qos")
+	}
+
 	msgs, err := ch.Consume(
 		c.QueueName,  // queue
 		"myconsumer", // consumer name
@@ -66,13 +76,22 @@ func (c *Consumer) Consume(ch *amqp.Channel) error {
 		return errors.WithMessage(err, "failed to consume "+c.QueueName)
 	}
 
-	for msg := range msgs {
-		content := string(msg.Body)
+	defer fmt.Println("consume method finished")
 
-		fmt.Println(content)
+	for {
+		select {
+		case msg, ok := <-msgs:
+			if !ok {
+				return amqp.ErrClosed
+			}
 
-		msg.Ack(false)
+			content := string(msg.Body)
+
+			fmt.Println("New message:", content)
+
+			msg.Ack(false)
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
-
-	return nil
 }

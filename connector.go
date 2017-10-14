@@ -20,6 +20,143 @@ type Connector struct {
 	connCh    chan *amqp.Connection
 }
 
+// StartMultipleConsumers is used to start implementation of Consumer interface "count" times.
+// Method Declare will be called once, and Consume will be called "count" times (one goroutine per call).
+// It's blocking method.
+func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consumer, count int) error {
+	for {
+		// Use declareChannel only for consumer.Declare,
+		// and close it after successful declaring.
+		declareChannel, err := c.Channel(ctx)
+		if err != nil {
+			if contextDone(ctx) {
+				return errors.WithMessage(err, "failed to get channel")
+			}
+
+			continue
+		}
+
+		err = consumer.Declare(ctx, declareChannel)
+		if err != nil {
+			if contextDone(ctx) {
+				return errors.WithMessage(err, "failed to declare consumer")
+			}
+
+			continue
+		}
+		declareChannel.Close()
+
+		var g errgroup.Group
+
+		consumeCtx, cancel := context.WithCancel(ctx)
+
+		for i := 0; i < count; i++ {
+			// Allocate new channel for each consumer.
+			consumeChannel, err := c.Channel(consumeCtx)
+			if err != nil {
+				// If we got error then stop all previously started consumers
+				// and wait before they will be finished.
+				cancel()
+
+				break
+			}
+
+			closeCh := consumeChannel.NotifyClose(make(chan *amqp.Error, 1))
+
+			// Start two goroutine: one for consume and second for close notification receiving.
+			// When close notification received via closeCh, then consumeCtx and consumeChannel will be close.
+			// In this case both goroutine must finish their work.
+
+			g.Go(func() error {
+				defer cancel()
+
+				err := consumer.Consume(consumeCtx, consumeChannel)
+				if err != nil {
+					return err
+				}
+
+				closeErr := consumeChannel.Close()
+				if closeErr != nil {
+					return closeErr
+				}
+
+				return nil
+			})
+
+			g.Go(func() error {
+				var err error
+
+				select {
+				case <-consumeCtx.Done():
+					err = consumeCtx.Err()
+				case amqpErr := <-closeCh:
+					// On amqp error send stop signal to all consumer's goroutines.
+					cancel()
+
+					err = amqpErr
+				}
+
+				closeErr := consumeChannel.Close()
+				if closeErr != nil {
+					return closeErr
+				}
+
+				return err
+			})
+		}
+
+		err = g.Wait()
+		if err != nil && contextDone(ctx) {
+			cancel()
+
+			return err
+		}
+
+		cancel()
+	}
+}
+
+// StartMultipleConsumers is used to start implementation of Consumer interface.
+// It's blocking method.
+func (c *Connector) StartConsumer(ctx context.Context, consumer Consumer) error {
+	return c.StartMultipleConsumers(ctx, consumer, 1)
+}
+
+// Do open connection with rabbitmq and
+// start routine to keep it active.
+func Do(ctx context.Context, cfg Config) *Connector {
+	group, ctx := errgroup.WithContext(ctx)
+
+	c := &Connector{
+		cfg:    cfg,
+		errg:   group,
+		connCh: make(chan *amqp.Connection),
+	}
+
+	group.Go(func() error {
+		return c.start(ctx)
+	})
+
+	return c
+}
+
+// Wait is used to catch an error from Connector.
+// It's blocking method.
+func (c *Connector) Wait() error {
+	return c.errg.Wait()
+}
+
+// Channel allocate and return new amqp.Channel.
+// On error new Channel should be opened.
+func (c *Connector) Channel(ctx context.Context) (*amqp.Channel, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case conn := <-c.connCh:
+		return conn.Channel()
+	}
+}
+
 // dial attempts to connect to rabbitmq.
 func (c *Connector) dial(ctx context.Context) error {
 	var err error
@@ -92,136 +229,6 @@ func (c *Connector) start(ctx context.Context) error {
 			cancel()
 		}
 	}
-}
-
-// Channel allocate and return new amqp.Channel.
-// On error new Channel should be opened.
-func (c *Connector) Channel(ctx context.Context) (*amqp.Channel, error) {
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case conn := <-c.connCh:
-		return conn.Channel()
-	}
-}
-
-// StartMultipleConsumers is used to declare consumer entities
-// start consuming and do consumer failover.
-// Declaring will called once, and Consume will be started "count" times (one goroutine per call).
-// It's blocking method.
-func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consumer, count int) error {
-	for {
-		// Use declareChannel only for consumer.Declare,
-		// and close it after successful declaring.
-		declareChannel, err := c.Channel(ctx)
-		if err != nil {
-			if contextDone(ctx) {
-				return errors.WithMessage(err, "failed to get channel")
-			}
-
-			continue
-		}
-
-		err = consumer.Declare(declareChannel)
-		if err != nil {
-			if contextDone(ctx) {
-				return errors.WithMessage(err, "failed to declare consumer")
-			}
-
-			continue
-		}
-		declareChannel.Close()
-
-		var g errgroup.Group
-
-		consumeCtx, cancel := context.WithCancel(ctx)
-
-		for i := 0; i < count; i++ {
-			// Allocate new channel for each consumer.
-			consumeChannel, err := c.Channel(consumeCtx)
-			if err != nil {
-				// If we got error then stop all previously started consumers
-				// and wait before they will be finished.
-				cancel()
-
-				break
-			}
-
-			closeCh := consumeChannel.NotifyClose(make(chan *amqp.Error, 1))
-
-			// Start two goroutine: one for consume and
-			// second for close notification receiving.
-			// When close notification received via closeCh,
-			// then consumeChannel will be close, so both goroutine will finish their work.
-
-			g.Go(func() error {
-				defer cancel()
-
-				err := consumer.Consume(consumeChannel)
-				if err != nil {
-					return err
-				}
-
-				closeErr := consumeChannel.Close()
-				if closeErr != nil {
-					return closeErr
-				}
-
-				return nil
-			})
-
-			g.Go(func() error {
-				var err error
-
-				select {
-				case <-consumeCtx.Done():
-					err = consumeCtx.Err()
-				case amqpErr := <-closeCh:
-					err = amqpErr
-				}
-
-				closeErr := consumeChannel.Close()
-				if closeErr != nil {
-					return closeErr
-				}
-
-				return err
-			})
-		}
-
-		err = g.Wait()
-		if err != nil && contextDone(ctx) {
-			cancel()
-
-			return err
-		}
-
-		cancel()
-	}
-}
-
-// Do open connection with rabbitmq and
-// start routine to keep it active.
-func Do(ctx context.Context, cfg Config) *Connector {
-	group, ctx := errgroup.WithContext(ctx)
-
-	c := &Connector{
-		cfg:    cfg,
-		errg:   group,
-		connCh: make(chan *amqp.Connection),
-	}
-
-	group.Go(func() error {
-		return c.start(ctx)
-	})
-
-	return c
-}
-
-// Wait is used to catch an error from Connector.
-// It's blocking method.
-func (c *Connector) Wait() error {
-	return c.errg.Wait()
 }
 
 // contextDone used to check was ctx.Done() channel closed.
