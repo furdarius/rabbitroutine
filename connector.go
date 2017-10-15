@@ -1,11 +1,11 @@
 package rabbitroutine
 
 import (
+
 	"time"
-
 	"context"
-
 	"fmt"
+
 	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
 	"golang.org/x/sync/errgroup"
