@@ -20,7 +20,7 @@ type Connector struct {
 	connCh    chan *amqp.Connection
 }
 
-// StartMultipleConsumers is used to start implementation of Consumer interface "count" times.
+// StartMultipleConsumers is used to start Consumer "count" times.
 // Method Declare will be called once, and Consume will be called "count" times (one goroutine per call).
 // It's blocking method.
 func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consumer, count int) error {
@@ -116,7 +116,7 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 	}
 }
 
-// StartMultipleConsumers is used to start implementation of Consumer interface.
+// StartConsumer is used to start Consumer.
 // It's blocking method.
 func (c *Connector) StartConsumer(ctx context.Context, consumer Consumer) error {
 	return c.StartMultipleConsumers(ctx, consumer, 1)
@@ -148,6 +148,7 @@ func (c *Connector) Wait() error {
 
 // Channel allocate and return new amqp.Channel.
 // On error new Channel should be opened.
+// It's blocking method. (It's wait before connection available)
 func (c *Connector) Channel(ctx context.Context) (*amqp.Channel, error) {
 	select {
 	case <-ctx.Done():
@@ -182,7 +183,7 @@ func (c *Connector) dial(ctx context.Context) error {
 	return err
 }
 
-// connBroadcast is used to synced return amqpConnection
+// connBroadcast is used to send available connection to connCh.
 func (c *Connector) connBroadcast(ctx context.Context) {
 	for {
 		select {
