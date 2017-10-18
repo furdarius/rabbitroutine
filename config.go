@@ -12,9 +12,9 @@ type Config struct {
 	Username    string
 	Password    string
 	VirtualHost string
-	// Max reconnect attempts
+	// Max reconnect attempts.
 	Attempts int
-	// How long wait between reconnect
+	// How long wait between reconnect.
 	Wait time.Duration
 }
 

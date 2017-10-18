@@ -4,21 +4,13 @@ import (
 	"context"
 	"testing"
 	"time"
+	"os"
 
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
 )
 
-var testCfg = Config{
-	Host:     "127.0.0.1",
-	Port:     5672,
-	Username: "guest",
-	Password: "guest",
-	// Max reconnect attempts
-	Attempts: 20,
-	// How long wait between reconnect
-	Wait: 5 * time.Second,
-}
+var testCfg = integrationConfig()
 
 func TestContextDoneIsCorrectAndNotBlocking(t *testing.T) {
 	defer time.AfterFunc(1*time.Second, func() { panic("contextDone deadlock") }).Stop()
@@ -91,4 +83,29 @@ func TestStartIsBlocking(t *testing.T) {
 	}()
 
 	<-time.After(5 * time.Millisecond)
+}
+
+func integrationURLFromEnv() string {
+	url := os.Getenv("AMQP_URL")
+	if url == "" {
+		url = "amqp://"
+	}
+
+	return url
+}
+
+func integrationConfig() Config {
+	uri, err := amqp.ParseURI(integrationURLFromEnv())
+	if err != nil {
+		panic("failed to parse AMQP_URL")
+	}
+
+	return Config{
+		Host:     uri.Host,
+		Port:     uri.Port,
+		Username: uri.Username,
+		Password: uri.Password,
+		Attempts: 20000,
+		Wait:     5 * time.Second,
+	}
 }
