@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/streadway/amqp"
+	"github.com/stretchr/testify/assert"
 )
 
-var testCfg Config = Config{
+var testCfg = Config{
 	Host:     "127.0.0.1",
 	Port:     5672,
 	Username: "guest",
@@ -42,6 +42,7 @@ func TestContextDoneIsCorrectAndNotBlocking(t *testing.T) {
 			true,
 		},
 		{
+			// nolint: vet
 			func() context.Context {
 				ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 				return ctx
@@ -66,10 +67,11 @@ func TestDoNotBlocking(t *testing.T) {
 func TestDoWaitIsBlocking(t *testing.T) {
 	conn := Do(context.Background(), testCfg)
 
+	// nolint: errcheck
 	go func() {
 		conn.Wait()
 
-		t.Fatal("Wait is not blocking")
+		panic("Wait is not blocking")
 	}()
 
 	<-time.After(5 * time.Millisecond)
@@ -81,10 +83,11 @@ func TestStartIsBlocking(t *testing.T) {
 		connCh: make(chan *amqp.Connection),
 	}
 
+	// nolint: errcheck
 	go func() {
 		c.start(context.Background())
 
-		t.Fatal("start is not blocking")
+		panic("start is not blocking")
 	}()
 
 	<-time.After(5 * time.Millisecond)

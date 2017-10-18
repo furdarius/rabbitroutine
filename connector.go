@@ -1,10 +1,9 @@
 package rabbitroutine
 
 import (
-
-	"time"
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
@@ -13,20 +12,21 @@ import (
 
 // Connector do all rabbitmq failover routine for you.
 type Connector struct {
-	cfg       Config
-	conn      *amqp.Connection
-	errg      *errgroup.Group
-	consumers []Consumer
-	connCh    chan *amqp.Connection
+	cfg    Config
+	conn   *amqp.Connection
+	errg   *errgroup.Group
+	connCh chan *amqp.Connection
 }
 
 // StartMultipleConsumers is used to start Consumer "count" times.
 // Method Declare will be called once, and Consume will be called "count" times (one goroutine per call).
 // It's blocking method.
+// nolint: gocyclo
 func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consumer, count int) error {
 	for {
 		// Use declareChannel only for consumer.Declare,
 		// and close it after successful declaring.
+		// nolint: vetshadow
 		declareChannel, err := c.Channel(ctx)
 		if err != nil {
 			if contextDone(ctx) {
@@ -44,7 +44,15 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 
 			continue
 		}
-		declareChannel.Close()
+
+		err = declareChannel.Close()
+		if err != nil {
+			if contextDone(ctx) {
+				return errors.WithMessage(err, "failed to close declareChannel")
+			}
+
+			continue
+		}
 
 		var g errgroup.Group
 
@@ -52,6 +60,7 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 
 		for i := 0; i < count; i++ {
 			// Allocate new channel for each consumer.
+			// nolint: vetshadow
 			consumeChannel, err := c.Channel(consumeCtx)
 			if err != nil {
 				// If we got error then stop all previously started consumers
@@ -70,20 +79,17 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 			g.Go(func() error {
 				defer cancel()
 
+				// nolint: vetshadow
 				err := consumer.Consume(consumeCtx, consumeChannel)
 				if err != nil {
 					return err
 				}
 
-				closeErr := consumeChannel.Close()
-				if closeErr != nil {
-					return closeErr
-				}
-
-				return nil
+				return consumeChannel.Close()
 			})
 
 			g.Go(func() error {
+				// nolint: vetshadow
 				var err error
 
 				select {
