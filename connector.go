@@ -16,6 +16,9 @@ type Connector struct {
 	conn   *amqp.Connection
 	errg   *errgroup.Group
 	connCh chan *amqp.Connection
+
+	// retries has list of Retry event handlers.
+	retries []func(Retry)
 }
 
 // StartMultipleConsumers is used to start Consumer "count" times.
@@ -164,6 +167,19 @@ func (c *Connector) Channel(ctx context.Context) (*amqp.Channel, error) {
 	}
 }
 
+// AddRetryListener registers a listener for connect retry events.
+// NOTE: not concurrency-safe
+func (c *Connector) AddRetryListener(h func(Retry)) {
+	c.retries = append(c.retries, h)
+}
+
+// emitRetry notify listeners about connection retry event.
+func (c *Connector) emitRetry(r Retry) {
+	for _, h := range c.retries {
+		h(r)
+	}
+}
+
 // dial attempts to connect to rabbitmq.
 func (c *Connector) dial(ctx context.Context) error {
 	var err error
@@ -177,10 +193,14 @@ func (c *Connector) dial(ctx context.Context) error {
 		default:
 			c.conn, err = amqp.Dial(url)
 			if err != nil {
+				c.emitRetry(Retry{i, false, err})
+
 				time.Sleep(c.cfg.Wait)
 
 				continue
 			}
+
+			c.emitRetry(Retry{i, true, err})
 
 			return nil
 		}
