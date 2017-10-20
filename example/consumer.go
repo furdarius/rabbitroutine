@@ -55,6 +55,8 @@ func (c *Consumer) Declare(ctx context.Context, ch *amqp.Channel) error {
 }
 
 func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
+	defer log.Println("consume method finished")
+
 	err := ch.Qos(
 		1,     // prefetch count
 		0,     // prefetch size
@@ -76,8 +78,6 @@ func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
 	if err != nil {
 		return errors.WithMessage(err, "failed to consume "+c.QueueName)
 	}
-
-	defer log.Println("consume method finished")
 
 	for {
 		select {

@@ -28,7 +28,7 @@ func main() {
 		// Max reconnect attempts
 		Attempts: 20,
 		// How long wait between reconnect
-		Wait: 5 * time.Second,
+		Wait: 2 * time.Second,
 	})
 
 	conn.AddRetriedListener(func(r rabbitroutine.Retried) {
@@ -68,7 +68,7 @@ func main() {
 
 	if err := g.Wait(); err != nil && err != ErrTermSig {
 		log.Fatal(
-			"failed to wait goroutine group",
+			"failed to wait goroutine group: ",
 			err)
 	}
 }

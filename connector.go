@@ -30,45 +30,46 @@ type Connector struct {
 // NOTE: It's blocking method.
 // nolint: gocyclo
 func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consumer, count int) error {
+	var startErr error
+
 	for {
+		if contextDone(ctx) {
+			return startErr
+		}
+
 		// Use declareChannel only for consumer.Declare,
 		// and close it after successful declaring.
 		// nolint: vetshadow
 		declareChannel, err := c.Channel(ctx)
 		if err != nil {
-			if contextDone(ctx) {
-				return errors.WithMessage(err, "failed to get channel")
-			}
+			startErr = errors.WithMessage(err, "failed to get channel")
 
 			continue
 		}
 
 		err = consumer.Declare(ctx, declareChannel)
 		if err != nil {
-			if contextDone(ctx) {
-				return errors.WithMessage(err, "failed to declare consumer")
-			}
+			startErr = errors.WithMessage(err, "failed to declare consumer")
 
 			continue
 		}
 
 		err = declareChannel.Close()
 		if err != nil {
-			if contextDone(ctx) {
-				return errors.WithMessage(err, "failed to close declareChannel")
-			}
+			startErr = errors.WithMessage(err, "failed to close declareChannel")
 
 			continue
 		}
 
 		var g errgroup.Group
 
-		consumeCtx, cancel := context.WithCancel(ctx)
+		// nolint: vetshadow
+		ctx, cancel := context.WithCancel(ctx)
 
 		for i := 0; i < count; i++ {
 			// Allocate new channel for each consumer.
 			// nolint: vetshadow
-			consumeChannel, err := c.Channel(consumeCtx)
+			consumeChannel, err := c.Channel(ctx)
 			if err != nil {
 				// If we got error then stop all previously started consumers
 				// and wait before they will be finished.
@@ -79,15 +80,16 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 
 			closeCh := consumeChannel.NotifyClose(make(chan *amqp.Error, 1))
 
-			// Start two goroutine: one for consume and second for close notification receiving.
-			// When close notification received via closeCh, then consumeCtx and consumeChannel will be close.
-			// In this case both goroutine must finish their work.
+			// Start two goroutine: one for consuming and second for close notification receiving.
+			// When close notification received via closeCh, then all consumers get notification via consumeCtx.
+			// In this case consuming must be finished and then goroutine will finish their work.
 
 			g.Go(func() error {
+				// On consume exit send stop signal to all consumer's goroutines.
 				defer cancel()
 
 				// nolint: vetshadow
-				err := consumer.Consume(consumeCtx, consumeChannel)
+				err := consumer.Consume(ctx, consumeChannel)
 				if err != nil {
 					return err
 				}
@@ -96,35 +98,30 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 			})
 
 			g.Go(func() error {
-				// nolint: vetshadow
-				var err error
+				// On amqp error send stop signal to all consumer's goroutines.
+				defer cancel()
+
+				var stopErr error
 
 				select {
-				case <-consumeCtx.Done():
-					err = consumeCtx.Err()
+				case <-ctx.Done():
+					stopErr = ctx.Err()
 				case amqpErr := <-closeCh:
-					// On amqp error send stop signal to all consumer's goroutines.
-					cancel()
-
-					err = amqpErr
+					stopErr = amqpErr
 				}
 
-				closeErr := consumeChannel.Close()
-				if closeErr != nil {
-					return closeErr
+				err := consumeChannel.Close()
+				if err != nil {
+					return err
 				}
 
-				return err
+				return stopErr
 			})
 		}
 
-		err = g.Wait()
-		if err != nil && contextDone(ctx) {
-			cancel()
+		startErr = g.Wait()
 
-			return err
-		}
-
+		// go vet notify: the cancel function is not used on all paths (possible context leak)
 		cancel()
 	}
 }
@@ -210,22 +207,20 @@ func (c *Connector) dial(ctx context.Context) error {
 
 	url := c.cfg.URL()
 
-	for i := 0; i < c.cfg.Attempts; i++ {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			c.conn, err = amqp.Dial(url)
-			if err != nil {
-				c.emitRetried(Retried{i, err})
+	for i := 1; i <= c.cfg.Attempts; i++ {
+		c.conn, err = amqp.Dial(url)
+		if err != nil {
+			c.emitRetried(Retried{i, err})
 
-				time.Sleep(c.cfg.Wait)
-
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(c.cfg.Wait):
 				continue
 			}
-
-			return nil
 		}
+
+		return nil
 	}
 
 	return errors.WithMessage(err, "maximum attempts exceeded")
