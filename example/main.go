@@ -31,9 +31,13 @@ func main() {
 		Wait: 5 * time.Second,
 	})
 
-	conn.AddRetryListener(func(r rabbitroutine.Retry) {
-		log.Printf("try to connect to RabbitMQ: success=%t, attempt=%d, error=\"%v\"",
-			r.Success, r.Attempt, r.Error)
+	conn.AddRetriedListener(func(r rabbitroutine.Retried) {
+		log.Printf("try to connect to RabbitMQ: attempt=%d, error=\"%v\"",
+			r.Attempt, r.Error)
+	})
+
+	conn.AddDialedListener(func(_ rabbitroutine.Dialed) {
+		log.Printf("RabbitMQ connection successfully established")
 	})
 
 	consumer := &Consumer{

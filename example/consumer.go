@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"context"
 
 	"github.com/pkg/errors"
@@ -76,7 +77,7 @@ func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
 		return errors.WithMessage(err, "failed to consume "+c.QueueName)
 	}
 
-	defer fmt.Println("consume method finished")
+	defer log.Println("consume method finished")
 
 	for {
 		select {
@@ -89,7 +90,10 @@ func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
 
 			fmt.Println("New message:", content)
 
-			msg.Ack(false)
+			err := msg.Ack(false)
+			if err != nil {
+				log.Printf("failed to Ack message: %v", err)
+			}
 		case <-ctx.Done():
 			return ctx.Err()
 		}

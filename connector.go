@@ -17,13 +17,17 @@ type Connector struct {
 	errg   *errgroup.Group
 	connCh chan *amqp.Connection
 
-	// retries has list of Retry event handlers.
-	retries []func(Retry)
+	// retries has list of Retried event handlers.
+	retries []func(Retried)
+	// dials has list of Dialed event handlers.
+	dials []func(Dialed)
 }
 
 // StartMultipleConsumers is used to start Consumer "count" times.
 // Method Declare will be called once, and Consume will be called "count" times (one goroutine per call).
 // It's blocking method.
+//
+// NOTE: It's blocking method.
 // nolint: gocyclo
 func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consumer, count int) error {
 	for {
@@ -126,7 +130,8 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 }
 
 // StartConsumer is used to start Consumer.
-// It's blocking method.
+//
+// NOTE: It's blocking method.
 func (c *Connector) StartConsumer(ctx context.Context, consumer Consumer) error {
 	return c.StartMultipleConsumers(ctx, consumer, 1)
 }
@@ -150,14 +155,16 @@ func Do(ctx context.Context, cfg Config) *Connector {
 }
 
 // Wait is used to catch an error from Connector.
-// It's blocking method.
+//
+// NOTE: It's blocking method.
 func (c *Connector) Wait() error {
 	return c.errg.Wait()
 }
 
 // Channel allocate and return new amqp.Channel.
 // On error new Channel should be opened.
-// It's blocking method. (It's wait before connection available)
+//
+// NOTE: It's blocking method. (It's waiting before connection will be established)
 func (c *Connector) Channel(ctx context.Context) (*amqp.Channel, error) {
 	select {
 	case <-ctx.Done():
@@ -167,16 +174,33 @@ func (c *Connector) Channel(ctx context.Context) (*amqp.Channel, error) {
 	}
 }
 
-// AddRetryListener registers a listener for connect retry events.
-// NOTE: not concurrency-safe
-func (c *Connector) AddRetryListener(h func(Retry)) {
+// AddRetriedListener registers a event listener of
+// connection establishing attempts.
+//
+// NOTE: not concurrency-safe.
+func (c *Connector) AddRetriedListener(h func(Retried)) {
 	c.retries = append(c.retries, h)
 }
 
 // emitRetry notify listeners about connection retry event.
-func (c *Connector) emitRetry(r Retry) {
+func (c *Connector) emitRetried(r Retried) {
 	for _, h := range c.retries {
 		h(r)
+	}
+}
+
+// AddDialedListener registers a event listener of
+// connection successfully established events.
+//
+// NOTE: not concurrency-safe.
+func (c *Connector) AddDialedListener(h func(r Dialed)) {
+	c.dials = append(c.dials, h)
+}
+
+// emitRetry notify listeners about dial event.
+func (c *Connector) emitDialed(d Dialed) {
+	for _, h := range c.dials {
+		h(d)
 	}
 }
 
@@ -193,20 +217,18 @@ func (c *Connector) dial(ctx context.Context) error {
 		default:
 			c.conn, err = amqp.Dial(url)
 			if err != nil {
-				c.emitRetry(Retry{i, false, err})
+				c.emitRetried(Retried{i, err})
 
 				time.Sleep(c.cfg.Wait)
 
 				continue
 			}
 
-			c.emitRetry(Retry{i, true, err})
-
 			return nil
 		}
 	}
 
-	return err
+	return errors.WithMessage(err, "maximum attempts exceeded")
 }
 
 // connBroadcast is used to send available connection to connCh.
@@ -222,7 +244,8 @@ func (c *Connector) connBroadcast(ctx context.Context) {
 
 // Start try to keep rabbitmq connection active
 // by catching and handling connection errors.
-// It's blocking method.
+//
+// NOTE: It's blocking method.
 func (c *Connector) start(ctx context.Context) error {
 	for {
 		err := c.dial(ctx)
@@ -230,7 +253,7 @@ func (c *Connector) start(ctx context.Context) error {
 			return errors.WithMessage(err, "failed to dial")
 		}
 
-		fmt.Println("dialed")
+		c.emitDialed(Dialed{})
 
 		// In the case of connection problems,
 		// we will get an error from closeCh

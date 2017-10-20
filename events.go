@@ -1,8 +1,12 @@
 package rabbitroutine
 
-// Retry is fired when connection retrying occurs.
-type Retry struct {
+// Retried is fired when connection retrying occurs.
+// The event will be emitted only if the connection was not established.
+// If connection was successfully established Dialed event emitted.
+type Retried struct {
 	Attempt int
-	Success bool
 	Error   error
 }
+
+// Dialed is fired when connection was successfully established.
+type Dialed struct {}
