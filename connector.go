@@ -2,7 +2,6 @@ package rabbitroutine
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -21,6 +20,8 @@ type Connector struct {
 	retries []func(Retried)
 	// dials has list of Dialed event handlers.
 	dials []func(Dialed)
+	// amqpnotifies has list of AMQPNotified event handlers.
+	amqpnotifies []func(AMQPNotified)
 }
 
 // StartMultipleConsumers is used to start Consumer "count" times.
@@ -107,6 +108,8 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 				case <-ctx.Done():
 					stopErr = ctx.Err()
 				case amqpErr := <-closeCh:
+					c.emitAMQPNotified(AMQPNotified{amqpErr})
+
 					stopErr = amqpErr
 				}
 
@@ -187,17 +190,32 @@ func (c *Connector) emitRetried(r Retried) {
 }
 
 // AddDialedListener registers a event listener of
-// connection successfully established events.
+// connection successfully established.
 //
 // NOTE: not concurrency-safe.
 func (c *Connector) AddDialedListener(h func(r Dialed)) {
 	c.dials = append(c.dials, h)
 }
 
-// emitRetry notify listeners about dial event.
+// emitDialed notify listeners about dial event.
 func (c *Connector) emitDialed(d Dialed) {
 	for _, h := range c.dials {
 		h(d)
+	}
+}
+
+// AddAMQPNotifiedListener registers a event listener of
+// AMQP error receiving.
+//
+// NOTE: not concurrency-safe.
+func (c *Connector) AddAMQPNotifiedListener(h func(n AMQPNotified)) {
+	c.amqpnotifies = append(c.amqpnotifies, h)
+}
+
+// emitAMQPNotified notify listeners about AMQPNotified event.
+func (c *Connector) emitAMQPNotified(n AMQPNotified) {
+	for _, h := range c.amqpnotifies {
+		h(n)
 	}
 }
 
@@ -268,8 +286,8 @@ func (c *Connector) start(ctx context.Context) error {
 			}
 
 			return ctx.Err()
-		case <-closeCh:
-			fmt.Println("connection close channel caught")
+		case amqpErr := <-closeCh:
+			c.emitAMQPNotified(AMQPNotified{amqpErr})
 
 			cancel()
 		}

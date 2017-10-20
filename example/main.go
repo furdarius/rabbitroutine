@@ -40,6 +40,10 @@ func main() {
 		log.Printf("RabbitMQ connection successfully established")
 	})
 
+	conn.AddAMQPNotifiedListener(func(n rabbitroutine.AMQPNotified) {
+		log.Printf("RabbitMQ error received: %v", n.Error)
+	})
+
 	consumer := &Consumer{
 		ExchangeName: "myexch",
 		QueueName:    "myqueue",
