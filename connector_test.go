@@ -57,7 +57,7 @@ func TestStartIsBlocking(t *testing.T) {
 	go func() {
 		conn.Start(context.Background())
 
-		panic("Wait is not blocking")
+		panic("Start is not blocking")
 	}()
 
 	<-time.After(5 * time.Millisecond)
@@ -66,7 +66,7 @@ func TestStartIsBlocking(t *testing.T) {
 func TestStartReturnErrorOnFailedReconnect(t *testing.T) {
 	conn := New(Config{
 		Attempts: 1,
-		Wait:     100 * time.Millisecond,
+		Wait:     time.Millisecond,
 	})
 
 	err := conn.Start(context.Background())
