@@ -6,11 +6,51 @@
 
 This is small library, that do RabbitMQ auto reconnect and publish retry routine for you.
 
-## Adding as dependency by "go dep"
+## Install
+```
+go get github.com/furdarius/rabbitroutine
+```
+
+### Adding as dependency by "go dep"
 ```
 $ dep ensure -add github.com/furdarius/rabbitroutine
 ```
 
 ## Usage
 
-You can find example in "example" subdirectory.
+
+```go
+
+type Consumer struct {}
+func (c *Consumer) Declare(ctx context.Context, ch *amqp.Channel) error {}
+func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel) error {}
+
+
+conn := rabbitroutine.New(rabbitroutine.Config{
+    Host:     "127.0.0.1",
+    Port:     5672,
+    Username: "guest",
+    Password: "guest",
+    // Max reconnect attempts
+    Attempts: 20,
+    // How long wait between reconnect
+    Wait: 2 * time.Second,
+})
+
+go func() {
+    err := conn.Start(ctx)
+    if err != nil {
+    	log.Println(err)
+    }
+}()
+
+consumer := &Consumer{}
+go func() {
+    err := conn.StartConsumer(ctx, consumer)
+    if err != nil {
+        log.Println(err)
+    }
+}()
+```
+
+You can find more powerful example in "[example](https://github.com/furdarius/rabbitroutine/tree/master/example)" directory.
