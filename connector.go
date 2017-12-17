@@ -135,7 +135,7 @@ func (c *Connector) StartConsumer(ctx context.Context, consumer Consumer) error 
 }
 
 // New return new instance of Connector.
-func New(cfg Config) *Connector {
+func NewConnector(cfg Config) *Connector {
 	return &Connector{
 		cfg:    cfg,
 		connCh: make(chan *amqp.Connection),

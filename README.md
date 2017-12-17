@@ -26,7 +26,7 @@ func (c *Consumer) Declare(ctx context.Context, ch *amqp.Channel) error {}
 func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel) error {}
 
 
-conn := rabbitroutine.New(rabbitroutine.Config{
+conn := rabbitroutine.NewConnector(rabbitroutine.Config{
     Host:     "127.0.0.1",
     Port:     5672,
     Username: "guest",

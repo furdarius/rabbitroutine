@@ -52,7 +52,7 @@ func TestContextDoneIsCorrectAndNotBlocking(t *testing.T) {
 }
 
 func TestStartIsBlocking(t *testing.T) {
-	conn := New(testCfg)
+	conn := NewConnector(testCfg)
 
 	// nolint: errcheck
 	go func() {
@@ -65,7 +65,7 @@ func TestStartIsBlocking(t *testing.T) {
 }
 
 func TestStartReturnErrorOnFailedReconnect(t *testing.T) {
-	conn := New(Config{
+	conn := NewConnector(Config{
 		Attempts: 1,
 		Wait:     time.Millisecond,
 	})
@@ -75,7 +75,7 @@ func TestStartReturnErrorOnFailedReconnect(t *testing.T) {
 }
 
 func TestStartRespectContext(t *testing.T) {
-	conn := New(Config{
+	conn := NewConnector(Config{
 		Attempts: 100,
 		Wait:     5 * time.Minute,
 	})

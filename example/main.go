@@ -20,7 +20,7 @@ var (
 func main() {
 	g, ctx := errgroup.WithContext(context.Background())
 
-	conn := rabbitroutine.New(rabbitroutine.Config{
+	conn := rabbitroutine.NewConnector(rabbitroutine.Config{
 		Host:     "127.0.0.1",
 		Port:     5672,
 		Username: "guest",
