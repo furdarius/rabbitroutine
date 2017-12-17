@@ -23,6 +23,14 @@ type Connector struct {
 	amqpnotifies []func(AMQPNotified)
 }
 
+// NewConnector return new instance of Connector.
+func NewConnector(cfg Config) *Connector {
+	return &Connector{
+		cfg:    cfg,
+		connCh: make(chan *amqp.Connection),
+	}
+}
+
 // StartMultipleConsumers is used to start Consumer "count" times.
 // Method Declare will be called once, and Consume will be called "count" times (one goroutine per call).
 // It's blocking method.
@@ -63,13 +71,12 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 
 		var g errgroup.Group
 
-		// nolint: vetshadow
-		ctx, cancel := context.WithCancel(ctx)
+		consumeCtx, cancel := context.WithCancel(ctx)
 
 		for i := 0; i < count; i++ {
 			// Allocate new channel for each consumer.
 			// nolint: vetshadow
-			consumeChannel, err := c.Channel(ctx)
+			consumeChannel, err := c.Channel(consumeCtx)
 			if err != nil {
 				// If we got error then stop all previously started consumers
 				// and wait before they will be finished.
@@ -89,7 +96,7 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 				defer cancel()
 
 				// nolint: vetshadow
-				err := consumer.Consume(ctx, consumeChannel)
+				err := consumer.Consume(consumeCtx, consumeChannel)
 				if err != nil {
 					return err
 				}
@@ -104,8 +111,8 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 				var stopErr error
 
 				select {
-				case <-ctx.Done():
-					stopErr = ctx.Err()
+				case <-consumeCtx.Done():
+					stopErr = consumeCtx.Err()
 				case amqpErr := <-closeCh:
 					c.emitAMQPNotified(AMQPNotified{amqpErr})
 
@@ -132,14 +139,6 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 // NOTE: It's blocking method.
 func (c *Connector) StartConsumer(ctx context.Context, consumer Consumer) error {
 	return c.StartMultipleConsumers(ctx, consumer, 1)
-}
-
-// New return new instance of Connector.
-func NewConnector(cfg Config) *Connector {
-	return &Connector{
-		cfg:    cfg,
-		connCh: make(chan *amqp.Connection),
-	}
 }
 
 // Channel allocate and return new amqp.Channel.
