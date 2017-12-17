@@ -2,9 +2,9 @@ package rabbitroutine
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
-	"os"
 
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
@@ -50,18 +50,12 @@ func TestContextDoneIsCorrectAndNotBlocking(t *testing.T) {
 	}
 }
 
-func TestDoNotBlocking(t *testing.T) {
-	defer time.AfterFunc(1*time.Second, func() { panic("Do deadlock") }).Stop()
-
-	Do(context.Background(), testCfg)
-}
-
-func TestDoWaitIsBlocking(t *testing.T) {
-	conn := Do(context.Background(), testCfg)
+func TestStartIsBlocking(t *testing.T) {
+	conn := New(testCfg)
 
 	// nolint: errcheck
 	go func() {
-		conn.Wait()
+		conn.Start(context.Background())
 
 		panic("Wait is not blocking")
 	}()
@@ -69,20 +63,14 @@ func TestDoWaitIsBlocking(t *testing.T) {
 	<-time.After(5 * time.Millisecond)
 }
 
-func TestStartIsBlocking(t *testing.T) {
-	c := &Connector{
-		cfg:    testCfg,
-		connCh: make(chan *amqp.Connection),
-	}
+func TestStartReturnErrorOnFailedReconnect(t *testing.T) {
+	conn := New(Config{
+		Attempts: 1,
+		Wait:     100 * time.Millisecond,
+	})
 
-	// nolint: errcheck
-	go func() {
-		c.start(context.Background())
-
-		panic("start is not blocking")
-	}()
-
-	<-time.After(5 * time.Millisecond)
+	err := conn.Start(context.Background())
+	assert.Error(t, err)
 }
 
 func integrationURLFromEnv() string {

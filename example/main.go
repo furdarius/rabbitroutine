@@ -20,7 +20,7 @@ var (
 func main() {
 	g, ctx := errgroup.WithContext(context.Background())
 
-	conn := rabbitroutine.Do(ctx, rabbitroutine.Config{
+	conn := rabbitroutine.New(rabbitroutine.Config{
 		Host:     "127.0.0.1",
 		Port:     5672,
 		Username: "guest",
@@ -50,17 +50,17 @@ func main() {
 	}
 
 	g.Go(func() error {
+		log.Println("conn.Start starting")
+		defer log.Println("conn.Start finished")
+
+		return conn.Start(ctx)
+	})
+
+	g.Go(func() error {
 		log.Println("consumers starting")
 		defer log.Println("consumers finished")
 
 		return conn.StartMultipleConsumers(ctx, consumer, 5)
-	})
-
-	g.Go(func() error {
-		log.Println("conn.Wait starting")
-		defer log.Println("conn.Wait finished")
-
-		return conn.Wait()
 	})
 
 	g.Go(func() error {

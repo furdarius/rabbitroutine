@@ -13,7 +13,6 @@ import (
 type Connector struct {
 	cfg    Config
 	conn   *amqp.Connection
-	errg   *errgroup.Group
 	connCh chan *amqp.Connection
 
 	// retries has list of Retried event handlers.
@@ -135,29 +134,12 @@ func (c *Connector) StartConsumer(ctx context.Context, consumer Consumer) error 
 	return c.StartMultipleConsumers(ctx, consumer, 1)
 }
 
-// Do open connection with rabbitmq and
-// start routine to keep it active.
-func Do(ctx context.Context, cfg Config) *Connector {
-	group, ctx := errgroup.WithContext(ctx)
-
-	c := &Connector{
+// New return new instance of Connector.
+func New(cfg Config) *Connector {
+	return &Connector{
 		cfg:    cfg,
-		errg:   group,
 		connCh: make(chan *amqp.Connection),
 	}
-
-	group.Go(func() error {
-		return c.start(ctx)
-	})
-
-	return c
-}
-
-// Wait is used to catch an error from Connector.
-//
-// NOTE: It's blocking method.
-func (c *Connector) Wait() error {
-	return c.errg.Wait()
 }
 
 // Channel allocate and return new amqp.Channel.
@@ -256,9 +238,10 @@ func (c *Connector) connBroadcast(ctx context.Context) {
 
 // Start try to keep rabbitmq connection active
 // by catching and handling connection errors.
+// It will return any error only if ctx was done.
 //
 // NOTE: It's blocking method.
-func (c *Connector) start(ctx context.Context) error {
+func (c *Connector) Start(ctx context.Context) error {
 	for {
 		err := c.dial(ctx)
 		if err != nil {
