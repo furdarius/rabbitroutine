@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
 )
@@ -71,6 +72,20 @@ func TestStartReturnErrorOnFailedReconnect(t *testing.T) {
 
 	err := conn.Start(context.Background())
 	assert.Error(t, err)
+}
+
+func TestStartRespectContext(t *testing.T) {
+	conn := New(Config{
+		Attempts: 100,
+		Wait:     5 * time.Minute,
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := conn.Start(ctx)
+	assert.Error(t, err)
+	assert.Equal(t, errors.Cause(err), ctx.Err())
 }
 
 func integrationURLFromEnv() string {
