@@ -124,7 +124,6 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 
 		startErr = g.Wait()
 
-		// go vet notify: the cancel function is not used on all paths (possible context leak)
 		cancel()
 	}
 }

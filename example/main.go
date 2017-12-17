@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Furdarius/rabbitroutine"
+	"github.com/furdarius/rabbitroutine"
 	"golang.org/x/sync/errgroup"
 )
 

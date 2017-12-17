@@ -1,9 +1,9 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
-	"context"
 
 	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
