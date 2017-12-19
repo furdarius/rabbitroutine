@@ -38,11 +38,11 @@ func NewConnector(cfg Config) *Connector {
 // NOTE: It's blocking method.
 // nolint: gocyclo
 func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consumer, count int) error {
-	var startErr error
+	var lastErr error
 
 	for {
 		if contextDone(ctx) {
-			return startErr
+			return lastErr
 		}
 
 		// Use declareChannel only for consumer.Declare,
@@ -50,21 +50,21 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 		// nolint: vetshadow
 		declareChannel, err := c.Channel(ctx)
 		if err != nil {
-			startErr = errors.WithMessage(err, "failed to get channel")
+			lastErr = errors.WithMessage(err, "failed to get channel")
 
 			continue
 		}
 
 		err = consumer.Declare(ctx, declareChannel)
 		if err != nil {
-			startErr = errors.WithMessage(err, "failed to declare consumer")
+			lastErr = errors.WithMessage(err, "failed to declare consumer")
 
 			continue
 		}
 
 		err = declareChannel.Close()
 		if err != nil {
-			startErr = errors.WithMessage(err, "failed to close declareChannel")
+			lastErr = errors.WithMessage(err, "failed to close declareChannel")
 
 			continue
 		}
@@ -128,7 +128,7 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 			})
 		}
 
-		startErr = g.Wait()
+		lastErr = g.Wait()
 
 		cancel()
 	}
