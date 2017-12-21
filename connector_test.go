@@ -88,6 +88,17 @@ func TestStartRespectContext(t *testing.T) {
 	assert.Equal(t, errors.Cause(err), ctx.Err())
 }
 
+func TestConnBroadcastRespectContext(t *testing.T) {
+	defer time.AfterFunc(1*time.Second, func() { panic("connBroadcast don't respect context") }).Stop()
+
+	conn := NewConnector(Config{})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	conn.connBroadcast(ctx)
+}
+
 func integrationURLFromEnv() string {
 	url := os.Getenv("AMQP_URL")
 	if url == "" {
