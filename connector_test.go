@@ -99,6 +99,51 @@ func TestConnBroadcastRespectContext(t *testing.T) {
 	conn.connBroadcast(ctx)
 }
 
+func TestDialRespectContext(t *testing.T) {
+	defer time.AfterFunc(1*time.Second, func() { panic("dial don't respect context") }).Stop()
+
+	conn := NewConnector(Config{
+		Attempts: 100,
+		Wait:     5 * time.Minute,
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := conn.dial(ctx)
+	assert.Error(t, err)
+	assert.Equal(t, err, ctx.Err())
+}
+
+func TestDialRetryFailed(t *testing.T) {
+	defer time.AfterFunc(1*time.Second, func() { panic("dial don't respect context") }).Stop()
+
+	conn := NewConnector(Config{
+		Attempts: 3,
+		Wait:     1 * time.Millisecond,
+	})
+
+	err := conn.dial(context.Background())
+	assert.Error(t, err)
+	assert.Nil(t, conn.conn)
+}
+
+func TestChannelRespectContext(t *testing.T) {
+	defer time.AfterFunc(1*time.Second, func() { panic("Channel don't respect context") }).Stop()
+
+	conn := NewConnector(Config{
+		Attempts: 100,
+		Wait:     5 * time.Minute,
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := conn.Channel(ctx)
+	assert.Error(t, err)
+	assert.Equal(t, err, ctx.Err())
+}
+
 func integrationURLFromEnv() string {
 	url := os.Getenv("AMQP_URL")
 	if url == "" {
