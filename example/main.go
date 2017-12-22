@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/furdarius/rabbitroutine"
+	"github.com/pkg/errors"
+	"github.com/streadway/amqp"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -30,6 +32,8 @@ func main() {
 		// How long wait between reconnect
 		Wait: 2 * time.Second,
 	})
+
+	pub := rabbitroutine.NewPublisher(conn)
 
 	conn.AddRetriedListener(func(r rabbitroutine.Retried) {
 		log.Printf("try to connect to RabbitMQ: attempt=%d, error=\"%v\"",
@@ -61,6 +65,31 @@ func main() {
 		defer log.Println("consumers finished")
 
 		return conn.StartMultipleConsumers(ctx, consumer, 5)
+	})
+
+	g.Go(func() error {
+		log.Println("publishing starting")
+		defer log.Println("publishing finished")
+
+		i := 1
+		for {
+			time.Sleep(50 * time.Millisecond)
+
+			err := pub.EnsurePublish(ctx, consumer.ExchangeName, consumer.QueueName, amqp.Publishing{
+				Body: []byte(fmt.Sprintf("message %d", i)),
+			})
+			if err != nil {
+				log.Println("publish error:", err)
+
+				if errors.Cause(err) == context.Canceled {
+					return ctx.Err()
+				}
+			}
+
+			i++
+		}
+
+		return nil
 	})
 
 	g.Go(func() error {
