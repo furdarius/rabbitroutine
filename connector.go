@@ -253,8 +253,8 @@ func (c *Connector) Start(ctx context.Context) error {
 		// we will get an error from closeCh
 		closeCh := c.conn.NotifyClose(make(chan *amqp.Error, 1))
 
-		brctx, cancel := context.WithCancel(ctx)
-		go c.connBroadcast(brctx)
+		broadcastCtx, cancel := context.WithCancel(ctx)
+		go c.connBroadcast(broadcastCtx)
 
 		select {
 		case <-ctx.Done():
@@ -268,9 +268,9 @@ func (c *Connector) Start(ctx context.Context) error {
 
 			return ctx.Err()
 		case amqpErr := <-closeCh:
-			c.emitAMQPNotified(AMQPNotified{amqpErr})
-
 			cancel()
+
+			c.emitAMQPNotified(AMQPNotified{amqpErr})
 		}
 	}
 }
