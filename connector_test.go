@@ -2,16 +2,12 @@ package rabbitroutine
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
 )
-
-var testCfg = integrationConfig()
 
 func TestContextDoneIsCorrectAndNotBlocking(t *testing.T) {
 	defer time.AfterFunc(1*time.Second, func() { panic("contextDone deadlock") }).Stop()
@@ -52,7 +48,10 @@ func TestContextDoneIsCorrectAndNotBlocking(t *testing.T) {
 }
 
 func TestStartIsBlocking(t *testing.T) {
-	conn := NewConnector(testCfg)
+	conn := NewConnector(Config{
+		Attempts: 10,
+		Wait:     10 * time.Second,
+	})
 
 	// nolint: errcheck
 	go func() {
@@ -142,29 +141,4 @@ func TestChannelRespectContext(t *testing.T) {
 	_, err := conn.Channel(ctx)
 	assert.Error(t, err)
 	assert.Equal(t, err, ctx.Err())
-}
-
-func integrationURLFromEnv() string {
-	url := os.Getenv("AMQP_URL")
-	if url == "" {
-		url = "amqp://"
-	}
-
-	return url
-}
-
-func integrationConfig() Config {
-	uri, err := amqp.ParseURI(integrationURLFromEnv())
-	if err != nil {
-		panic("failed to parse AMQP_URL")
-	}
-
-	return Config{
-		Host:     uri.Host,
-		Port:     uri.Port,
-		Username: uri.Username,
-		Password: uri.Password,
-		Attempts: 20000,
-		Wait:     5 * time.Second,
-	}
 }
