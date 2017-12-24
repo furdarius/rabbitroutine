@@ -1,0 +1,23 @@
+language: go
+
+go:
+  - 1.8.x
+  - 1.9.x
+  - tip
+
+services:
+  - rabbitmq
+
+env:
+ - AMQP_URL=amqp://guest:guest@127.0.0.1:5672/
+
+before_install:
+  # Setup dependency management tool
+  - curl -L -s https://github.com/golang/dep/releases/download/v0.3.2/dep-linux-amd64 -o $GOPATH/bin/dep
+  - chmod +x $GOPATH/bin/dep
+
+install:
+  - dep ensure
+
+script:
+  - go test -v -tags integration -timeout 1s ./...
