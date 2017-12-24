@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"time"
@@ -13,7 +12,6 @@ import (
 )
 
 func main() {
-	flag.Parse()
 	ctx := context.Background()
 
 	conn := rabbitroutine.NewConnector(rabbitroutine.Config{
