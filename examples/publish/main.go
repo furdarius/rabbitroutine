@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/furdarius/rabbitroutine"
-	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
 )
 
@@ -29,27 +28,12 @@ func main() {
 
 	go conn.Start(ctx)
 
-	go func() {
-		log.Println("start publishing")
-
-		i := 1
-		for {
-			time.Sleep(50 * time.Millisecond)
-
-			err := pub.EnsurePublish(ctx, "myexch", "myqueue", amqp.Publishing{
-				Body: []byte(fmt.Sprintf("message %d", i)),
-			})
-			if err != nil {
-				log.Println("publish error:", err)
-
-				if errors.Cause(err) == context.Canceled {
-					return
-				}
-			}
-
-			i++
+	for i := 1; i <= 5000; i++ {
+		err := pub.EnsurePublish(ctx, "myexch", "myqueue", amqp.Publishing{
+			Body: []byte(fmt.Sprintf("message %d", i)),
+		})
+		if err != nil {
+			log.Println("publish error:", err)
 		}
-	}()
-
-	select {}
+	}
 }
