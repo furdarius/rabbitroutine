@@ -39,7 +39,7 @@ func (p *Publisher) EnsurePublish(ctx context.Context, exchange, key string, msg
 		return errors.Wrap(amqpErr, "failed to deliver a message")
 	case <-k.Confirm():
 		p.pool.Release(k)
-		
+
 		return nil
 	}
 }
