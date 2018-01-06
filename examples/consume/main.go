@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -63,13 +62,6 @@ func main() {
 
 		return conn.StartMultipleConsumers(ctx, consumer, 5)
 	})
-
-	go func() {
-		log.Println("http server starting")
-		defer log.Println("http server finished")
-
-		log.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
 
 	g.Go(func() error {
 		log.Println("signal trap starting")

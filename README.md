@@ -74,16 +74,13 @@ conn := rabbitroutine.NewConnector(rabbitroutine.Config{
     Wait: 2 * time.Second,
 })
 
-pub := rabbitroutine.NewPublisher(conn)
+pool := rabbitroutine.NewPool(conn)
+
+pub := rabbitroutine.NewPublisher(pool)
 
 ctx := context.Background()
 
-go func() {
-    err := conn.Start(ctx)
-    if err != nil {
-    	log.Println(err)
-    }
-}()
+go conn.Start(ctx)
 
 err := pub.EnsurePublish(ctx, "myexch", "myqueue", amqp.Publishing{
     Body: []byte("message"),
@@ -92,3 +89,17 @@ err := pub.EnsurePublish(ctx, "myexch", "myqueue", amqp.Publishing{
 ```
 
 You can find more powerful examples in "[examples](https://github.com/furdarius/rabbitroutine/tree/master/examples)" directory.
+
+## Contributing
+
+Pull requests are very much welcomed.  Create your pull request on a non-master
+branch, make sure a test or example is included that covers your change and
+your commits represent coherent changes that include a reason for the change.
+
+To run the integration tests, make sure you have RabbitMQ running on any host,
+export the environment variable `AMQP_URL=amqp://host/` and run `go test -tags
+integration`. As example:
+```
+AMQP_URL=amqp://guest:guest@127.0.0.1:5672/ go test -v -race -tags integration -timeout 2s
+```
+TravisCI will also run the integration tests.

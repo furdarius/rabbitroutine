@@ -14,7 +14,9 @@ func TestEnsurePublishRespectContext(t *testing.T) {
 	defer time.AfterFunc(1*time.Second, func() { panic("EnsurePublish don't respect context") }).Stop()
 
 	conn := NewConnector(Config{})
-	pub := Publisher{conn}
+	pool := NewPool(conn)
+
+	pub := Publisher{pool}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

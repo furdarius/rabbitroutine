@@ -9,31 +9,23 @@ import (
 
 // Publisher used to publish messages to RabbitMQ exchange.
 type Publisher struct {
-	conn *Connector
+	pool *Pool
 }
 
 // NewPublisher return new instance of Publisher.
-func NewPublisher(conn *Connector) *Publisher {
-	return &Publisher{conn}
+func NewPublisher(p *Pool) *Publisher {
+	return &Publisher{p}
 }
 
 // EnsurePublish sends msg to an exchange on the RabbitMQ
 // and wait to ensure that have successfully been received by the server.
 func (p *Publisher) EnsurePublish(ctx context.Context, exchange, key string, msg amqp.Publishing) error {
-	ch, err := p.conn.Channel(ctx)
+	k, err := p.pool.ChannelWithConfirm(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to receive channel for publishing")
 	}
-	defer ch.Close()
 
-	closeCh := ch.NotifyClose(make(chan *amqp.Error, 1))
-
-	err = ch.Confirm(false)
-	if err != nil {
-		return errors.Wrap(err, "failed to setup confirm mode for channel")
-	}
-
-	publishCh := ch.NotifyPublish(make(chan amqp.Confirmation, 1))
+	ch := k.Channel()
 
 	err = ch.Publish(exchange, key, false, false, msg)
 	if err != nil {
@@ -43,11 +35,11 @@ func (p *Publisher) EnsurePublish(ctx context.Context, exchange, key string, msg
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
-	case amqpErr := <-closeCh:
+	case amqpErr := <-k.Error():
 		return errors.Wrap(amqpErr, "failed to deliver a message")
-	case <-publishCh:
+	case <-k.Confirm():
+		p.pool.Release(k)
+
 		return nil
 	}
 }
-
-
