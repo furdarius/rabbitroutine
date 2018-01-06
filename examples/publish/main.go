@@ -24,7 +24,9 @@ func main() {
 		Wait: 2 * time.Second,
 	})
 
-	pub := rabbitroutine.NewPublisher(conn)
+	pool := rabbitroutine.NewPool(conn)
+
+	pub := rabbitroutine.NewPublisher(pool)
 
 	go conn.Start(ctx)
 

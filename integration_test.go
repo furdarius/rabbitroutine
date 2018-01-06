@@ -46,7 +46,8 @@ func TestIntegrationPublishing(t *testing.T) {
 	)
 	assert.NoError(t, err, "failed to declare exchange")
 
-	p := NewPublisher(conn)
+	pool := NewPool(conn)
+	p := NewPublisher(pool)
 	err = p.EnsurePublish(ctx, exchange, queue, amqp.Publishing{Body: []byte(msg)})
 	assert.NoError(t, err, "failed to publish")
 }
