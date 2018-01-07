@@ -14,6 +14,7 @@ import (
 )
 
 var (
+	// ErrTermSig used to notify that termination signal received.
 	ErrTermSig = errors.New("termination signal caught")
 )
 

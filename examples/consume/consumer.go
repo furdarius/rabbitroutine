@@ -9,11 +9,13 @@ import (
 	"github.com/streadway/amqp"
 )
 
+// Consumer implement rabbitroutine.Consumer interface.
 type Consumer struct {
 	ExchangeName string
 	QueueName    string
 }
 
+// Declare implement rabbitroutine.Consumer.(Declare) interface method.
 func (c *Consumer) Declare(ctx context.Context, ch *amqp.Channel) error {
 	err := ch.ExchangeDeclare(
 		c.ExchangeName, // name
@@ -54,6 +56,7 @@ func (c *Consumer) Declare(ctx context.Context, ch *amqp.Channel) error {
 	return nil
 }
 
+// Consume implement rabbitroutine.Consumer.(Consume) interface method.
 func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
 	defer log.Println("consume method finished")
 

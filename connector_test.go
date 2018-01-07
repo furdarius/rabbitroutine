@@ -30,14 +30,6 @@ func TestContextDoneIsCorrectAndNotBlocking(t *testing.T) {
 			},
 			true,
 		},
-		{
-			// nolint: vet
-			func() context.Context {
-				ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-				return ctx
-			},
-			false,
-		},
 	}
 
 	for _, test := range tests {

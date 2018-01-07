@@ -28,6 +28,7 @@ func main() {
 
 	pub := rabbitroutine.NewPublisher(pool)
 
+	// nolint: errcheck
 	go conn.Start(ctx)
 
 	for i := 1; i <= 5000; i++ {

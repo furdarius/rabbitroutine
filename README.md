@@ -2,6 +2,7 @@
 
 [![GoDoc](https://godoc.org/github.com/furdarius/rabbitroutine?status.svg)](https://godoc.org/github.com/furdarius/rabbitroutine)
 [![Build Status](https://travis-ci.org/furdarius/rabbitroutine.svg?branch=master)](https://travis-ci.org/furdarius/rabbitroutine)
+[![Go Report Card](https://goreportcard.com/badge/github.com/furdarius/rabbitroutine)](https://goreportcard.com/report/github.com/furdarius/rabbitroutine)
 
 # Rabbitmq Failover Routine For You
 
@@ -102,4 +103,10 @@ integration`. As example:
 ```
 AMQP_URL=amqp://guest:guest@127.0.0.1:5672/ go test -v -race -tags integration -timeout 2s
 ```
-TravisCI will also run the integration tests.
+
+Use `gometalinter` to check code with linters:
+```
+gometalinter -t ./...
+```
+
+TravisCI will also run the integration tests and gometalinter.
