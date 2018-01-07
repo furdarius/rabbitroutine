@@ -7,19 +7,27 @@ import (
 	"github.com/streadway/amqp"
 )
 
-// Publisher used to publish messages to RabbitMQ exchange.
-type Publisher struct {
+// Publisher interface provides functionality of publishing to RabbitMQ.
+type Publisher interface {
+	// Publish used to send msg to RabbitMQ exchange.
+	Publish(ctx context.Context, exchange, key string, msg amqp.Publishing) error
+}
+
+// EnsurePublisher implement Publisher interface and used to publish messages to RabbitMQ exchange.
+// It will block until is either message is successfully delivered, context has cancelled or error received.
+type EnsurePublisher struct {
 	pool *Pool
 }
 
-// NewPublisher return new instance of Publisher.
-func NewPublisher(p *Pool) *Publisher {
-	return &Publisher{p}
+// NewEnsurePublisher return new instance of EnsurePublisher.
+func NewEnsurePublisher(p *Pool) *EnsurePublisher {
+	return &EnsurePublisher{p}
 }
 
-// EnsurePublish sends msg to an exchange on the RabbitMQ
-// and wait to ensure that have successfully been received by the server.
-func (p *Publisher) EnsurePublish(ctx context.Context, exchange, key string, msg amqp.Publishing) error {
+// Publish sends msg to an exchange on the RabbitMQ
+// and wait to ensure that msg have successfully been received by the server.
+// It will block until is either message is successfully delivered, context has cancelled or error received.
+func (p *EnsurePublisher) Publish(ctx context.Context, exchange, key string, msg amqp.Publishing) error {
 	k, err := p.pool.ChannelWithConfirm(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to receive channel for publishing")
@@ -39,6 +47,37 @@ func (p *Publisher) EnsurePublish(ctx context.Context, exchange, key string, msg
 		return errors.Wrap(amqpErr, "failed to deliver a message")
 	case <-k.Confirm():
 		p.pool.Release(k)
+
+		return nil
+	}
+}
+
+// RetryPublisher implement Publisher interface and used to publish messages to RabbitMQ exchange.
+// It will block until is either message is successfully delivered or context has cancelled.
+// On error publisher will retry to publish msg.
+type RetryPublisher struct {
+	*EnsurePublisher
+}
+
+// NewRetryPublisher return new instance of RetryPublisher.
+func NewRetryPublisher(p *EnsurePublisher) *RetryPublisher {
+	return &RetryPublisher{p}
+}
+
+// Publish is used to send msg to RabbitMQ exchange.
+// It will block until is either message is delivered or context has cancelled.
+func (p *RetryPublisher) Publish(ctx context.Context, exchange, key string, msg amqp.Publishing) error {
+	for {
+		err := p.EnsurePublisher.Publish(ctx, exchange, key, msg)
+		if err != nil {
+			// If context error received then return it, else retry to publish.
+			cuz := errors.Cause(err)
+			if cuz == context.Canceled || cuz == context.DeadlineExceeded {
+				return err
+			}
+
+			continue
+		}
 
 		return nil
 	}

@@ -10,18 +10,35 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestEnsurePublishRespectContext(t *testing.T) {
-	defer time.AfterFunc(1*time.Second, func() { panic("EnsurePublish don't respect context") }).Stop()
+func TestEnsurePublisherRespectContext(t *testing.T) {
+	defer time.AfterFunc(1*time.Second, func() { panic("EnsurePublisher don't respect context") }).Stop()
 
 	conn := NewConnector(Config{})
 	pool := NewPool(conn)
 
-	pub := Publisher{pool}
+	pub := EnsurePublisher{pool}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	err := pub.EnsurePublish(ctx, "test", "test", amqp.Publishing{})
+	err := pub.Publish(ctx, "test", "test", amqp.Publishing{})
 	assert.Error(t, err)
 	assert.Equal(t, errors.Cause(err), ctx.Err())
 }
+
+func TestRetryPublisherRespectContext(t *testing.T) {
+	defer time.AfterFunc(1*time.Second, func() { panic("RetryPublisher don't respect context") }).Stop()
+
+	conn := NewConnector(Config{})
+	pool := NewPool(conn)
+
+	pub := RetryPublisher{&EnsurePublisher{pool}}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := pub.Publish(ctx, "test", "test", amqp.Publishing{})
+	assert.Error(t, err)
+	assert.Equal(t, errors.Cause(err), ctx.Err())
+}
+

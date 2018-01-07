@@ -25,14 +25,14 @@ func main() {
 	})
 
 	pool := rabbitroutine.NewPool(conn)
-
-	pub := rabbitroutine.NewPublisher(pool)
+	ensurePub := rabbitroutine.NewEnsurePublisher(pool)
+	pub := rabbitroutine.NewRetryPublisher(ensurePub)
 
 	// nolint: errcheck
 	go conn.Start(ctx)
 
 	for i := 1; i <= 5000; i++ {
-		err := pub.EnsurePublish(ctx, "myexch", "myqueue", amqp.Publishing{
+		err := pub.Publish(ctx, "myexch", "myqueue", amqp.Publishing{
 			Body: []byte(fmt.Sprintf("message %d", i)),
 		})
 		if err != nil {

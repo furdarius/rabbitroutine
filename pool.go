@@ -83,7 +83,7 @@ func (p *Pool) new(ctx context.Context) (ChannelKeeper, error) {
 
 	ch, err := p.conn.Channel(ctx)
 	if err != nil {
-		return keep, errors.Wrap(err, "failed to receive channel")
+		return keep, errors.Wrap(err, "failed to receive channel from connection")
 	}
 
 	closeCh := ch.NotifyClose(make(chan *amqp.Error, 1))

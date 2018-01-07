@@ -28,7 +28,7 @@ func (c *FakeConsumer) Consume(ctx context.Context, ch *amqp.Channel) error {
 	return c.consumeFn(ctx, ch)
 }
 
-func TestIntegrationEnsurePublish(t *testing.T) {
+func TestIntegrationEnsurePublisher_PublishSuccess(t *testing.T) {
 	ctx := context.Background()
 
 	conn := NewConnector(testCfg)
@@ -43,29 +43,62 @@ func TestIntegrationEnsurePublish(t *testing.T) {
 	assert.NotNil(t, ch, "nil channel received")
 	defer ch.Close()
 
-	testExchange := "TestIntegrationEnsurePublish_Exchange"
-	testQueue := "TestIntegrationEnsurePublish_Queue"
-	testMsg := "TestIntegrationEnsurePublish"
+	testName := t.Name()
+	testExchange := testName + "_Exchange"
+	testQueue := testName + "_Queue"
+	testMsg := testName + "_Message"
 
 	err = ch.ExchangeDeclare(testExchange, "direct", false, true, false, false, nil)
 	assert.NoError(t, err, "failed to declare exchange")
 
 	pool := NewPool(conn)
-	p := NewPublisher(pool)
-	err = p.EnsurePublish(ctx, testExchange, testQueue, amqp.Publishing{Body: []byte(testMsg)})
+	p := NewEnsurePublisher(pool)
+
+	err = p.Publish(ctx, testExchange, testQueue, amqp.Publishing{Body: []byte(testMsg)})
 	assert.NoError(t, err, "failed to publish")
 }
 
-func TestIntegrationEnsurePublishedReceiving(t *testing.T) {
+func TestIntegrationRetryPublisher_PublishSuccess(t *testing.T) {
+	ctx := context.Background()
+
+	conn := NewConnector(testCfg)
+
+	go func() {
+		err := conn.Start(ctx)
+		assert.NoError(t, err)
+	}()
+
+	ch, err := conn.Channel(ctx)
+	assert.NoError(t, err, "failed to receive channel")
+	assert.NotNil(t, ch, "nil channel received")
+	defer ch.Close()
+
+	testName := t.Name()
+	testExchange := testName + "_Exchange"
+	testQueue := testName + "_Queue"
+	testMsg := testName + "_Message"
+
+	err = ch.ExchangeDeclare(testExchange, "direct", false, true, false, false, nil)
+	assert.NoError(t, err, "failed to declare exchange")
+
+	pool := NewPool(conn)
+	p := NewRetryPublisher(NewEnsurePublisher(pool))
+
+	err = p.Publish(ctx, testExchange, testQueue, amqp.Publishing{Body: []byte(testMsg)})
+	assert.NoError(t, err, "failed to publish")
+}
+
+func TestIntegrationRetryPublisher_PublishedReceivingSuccess(t *testing.T) {
 	ctx := context.Background()
 
 	conn := NewConnector(testCfg)
 	pool := NewPool(conn)
-	pub := NewPublisher(pool)
+	pub := NewRetryPublisher(NewEnsurePublisher(pool))
 
-	testExchange := "TestIntegrationEnsurePublishedReceiving_Exchange"
-	testQueue := "TestIntegrationEnsurePublishedReceiving_Queue"
-	testMsg := "TestIntegrationEnsurePublishedReceiving"
+	testName := t.Name()
+	testExchange := testName + "_Exchange"
+	testQueue := testName + "_Queue"
+	testMsg := testName + "_Message"
 
 	deliveriesCh := make(chan string)
 
@@ -109,7 +142,7 @@ func TestIntegrationEnsurePublishedReceiving(t *testing.T) {
 	err = ch.QueueBind(testQueue, testQueue, testExchange, false, nil)
 	assert.NoError(t, err)
 
-	err = pub.EnsurePublish(ctx, testExchange, testQueue, amqp.Publishing{Body: []byte(testMsg)})
+	err = pub.Publish(ctx, testExchange, testQueue, amqp.Publishing{Body: []byte(testMsg)})
 	assert.NoError(t, err)
 
 	go func() {
@@ -121,21 +154,22 @@ func TestIntegrationEnsurePublishedReceiving(t *testing.T) {
 	assert.Equal(t, testMsg, actualMsg)
 }
 
-func TestIntegrationConcurrentPublishing(t *testing.T) {
+func TestIntegrationRetryPublisher_ConcurrentPublishingSuccess(t *testing.T) {
 	ctx := context.Background()
 
 	conn := NewConnector(testCfg)
 	pool := NewPool(conn)
-	pub := NewPublisher(pool)
+	pub := NewRetryPublisher(NewEnsurePublisher(pool))
 
 	go func() {
 		err := conn.Start(ctx)
 		assert.NoError(t, err)
 	}()
 
-	testExchange := "TestIntegrationConcurrentPublishing_Exchange"
-	testQueue := "TestIntegrationConcurrentPublishing_Queue"
-	testMsg := "TestIntegrationConcurrentPublishing"
+	testName := t.Name()
+	testExchange := testName + "_Exchange"
+	testQueue := testName + "_Queue"
+	testMsg := testName + "_Message"
 
 	ch, err := conn.Channel(ctx)
 	assert.NoError(t, err, "failed to receive channel")
@@ -153,7 +187,7 @@ func TestIntegrationConcurrentPublishing(t *testing.T) {
 
 	for i := 0; i < N; i++ {
 		go func() {
-			err := pub.EnsurePublish(ctx, testExchange, testQueue, amqp.Publishing{Body: []byte(testMsg)})
+			err := pub.Publish(ctx, testExchange, testQueue, amqp.Publishing{Body: []byte(testMsg)})
 			assert.NoError(t, err)
 
 			wg.Done()

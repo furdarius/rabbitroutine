@@ -25,12 +25,10 @@ $ dep ensure -add github.com/furdarius/rabbitroutine
 
 ```go
 
-// Consumer declare your own RabbitMQ consumer
-// implement rabbitroutine.Consumer interface.
+// Consumer declare your own RabbitMQ consumer implement rabbitroutine.Consumer interface.
 type Consumer struct {}
 func (c *Consumer) Declare(ctx context.Context, ch *amqp.Channel) error {}
 func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel) error {}
-
 
 conn := rabbitroutine.NewConnector(rabbitroutine.Config{
     Host:     "127.0.0.1",
@@ -64,6 +62,8 @@ go func() {
 ### Publising
 
 ```go
+ctx := context.Background()
+
 conn := rabbitroutine.NewConnector(rabbitroutine.Config{
     Host:     "127.0.0.1",
     Port:     5672,
@@ -76,16 +76,15 @@ conn := rabbitroutine.NewConnector(rabbitroutine.Config{
 })
 
 pool := rabbitroutine.NewPool(conn)
-
-pub := rabbitroutine.NewPublisher(pool)
-
-ctx := context.Background()
+ensurePub := rabbitroutine.NewEnsurePublisher(pool)
+pub := rabbitroutine.NewRetryPublisher(ensurePub)
 
 go conn.Start(ctx)
 
-err := pub.EnsurePublish(ctx, "myexch", "myqueue", amqp.Publishing{
-    Body: []byte("message"),
-})
+err := pub.Publish(ctx, "myexch", "myqueue", amqp.Publishing{Body: []byte("message")})
+if err != nil {
+    log.Println("publish error:", err)
+}
 
 ```
 
