@@ -106,7 +106,7 @@ AMQP_URL=amqp://guest:guest@127.0.0.1:5672/ go test -v -race -tags integration -
 
 Use `gometalinter` to check code with linters:
 ```
-gometalinter -t ./...
+gometalinter -t --vendor ./...
 ```
 
 TravisCI will also run the integration tests and gometalinter.
