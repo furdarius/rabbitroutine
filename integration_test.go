@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
 )
@@ -192,6 +193,87 @@ func TestIntegrationRetryPublisher_ConcurrentPublishingSuccess(t *testing.T) {
 
 			wg.Done()
 		}()
+	}
+
+	wg.Wait()
+}
+
+func TestIntegrationEnsurePublisher_PublishWithTimeoutError(t *testing.T) {
+	ctx := context.Background()
+
+	conn := NewConnector(testCfg)
+	pool := NewPool(conn)
+	pub := NewEnsurePublisher(pool)
+
+	go func() {
+		err := conn.Start(ctx)
+		assert.NoError(t, err)
+	}()
+
+	testName := t.Name()
+	testExchange := testName + "_Exchange"
+	testQueue := testName + "_Queue"
+	testMsg := testName + "_Message"
+
+	ch, err := conn.Channel(ctx)
+	assert.NoError(t, err, "failed to receive channel")
+	assert.NotNil(t, ch, "nil channel received")
+	defer ch.Close()
+
+	err = ch.ExchangeDeclare(testExchange, "direct", false, true, false, false, nil)
+	assert.NoError(t, err, "failed to declare exchange")
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, 0)
+	defer cancel()
+
+	err = pub.Publish(timeoutCtx, testExchange, testQueue, amqp.Publishing{Body: []byte(testMsg)})
+	assert.Equal(t, errors.Cause(err), context.DeadlineExceeded)
+}
+
+func TestIntegrationEnsurePublisher_ConcurrentPublishWithTimeout(t *testing.T) {
+	ctx := context.Background()
+
+	conn := NewConnector(testCfg)
+	pool := NewPool(conn)
+	pub := NewEnsurePublisher(pool)
+
+	go func() {
+		err := conn.Start(ctx)
+		assert.NoError(t, err)
+	}()
+
+	testName := t.Name()
+	testExchange := testName + "_Exchange"
+	testQueue := testName + "_Queue"
+	testMsg := testName + "_Message"
+
+	ch, err := conn.Channel(ctx)
+	assert.NoError(t, err, "failed to receive channel")
+	assert.NotNil(t, ch, "nil channel received")
+	defer ch.Close()
+
+	err = ch.ExchangeDeclare(testExchange, "direct", false, true, false, false, nil)
+	assert.NoError(t, err, "failed to declare exchange")
+
+	// Number of goroutine for concurrent publishing
+	N := 10
+
+	var wg sync.WaitGroup
+	wg.Add(N)
+
+	for i := 0; i < N; i++ {
+		go func(gNum int) {
+			timeout := time.Duration(gNum*2) * time.Millisecond
+			timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+			defer cancel()
+
+			err := pub.Publish(timeoutCtx, testExchange, testQueue, amqp.Publishing{Body: []byte(testMsg)})
+			if err != nil {
+				assert.Equal(t, errors.Cause(err), context.DeadlineExceeded)
+			}
+
+			wg.Done()
+		}(i)
 	}
 
 	wg.Wait()

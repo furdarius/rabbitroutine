@@ -45,7 +45,7 @@ func (p *EnsurePublisher) Publish(ctx context.Context, exchange, key string, msg
 
 	select {
 	case <-ctx.Done():
-		// Do not release amqp Channel, because old confirmation will be waited.
+		// Do not return to pool, because old confirmation will be waited.
 		k.Close()
 
 		return ctx.Err()
