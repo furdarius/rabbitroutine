@@ -30,6 +30,15 @@ func (k *ChannelKeeper) Confirm() <-chan amqp.Confirmation {
 	return k.confirmCh
 }
 
+// Close closes RabbitMQ channel stored in ChannelKeeper.
+func (k *ChannelKeeper) Close() {
+	if k.msgCh == nil {
+		return
+	}
+
+	_ = k.msgCh.Close()
+}
+
 // Pool is a set of AMQP Channels that may be individually saved and retrieved.
 type Pool struct {
 	conn *Connector

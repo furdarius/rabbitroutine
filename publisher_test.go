@@ -31,8 +31,8 @@ func TestRetryPublisherRespectContext(t *testing.T) {
 
 	conn := NewConnector(Config{})
 	pool := NewPool(conn)
-
-	pub := RetryPublisher{&EnsurePublisher{pool}}
+	ensurePub := NewEnsurePublisher(pool)
+	pub := NewRetryPublisher(ensurePub)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -40,5 +40,15 @@ func TestRetryPublisherRespectContext(t *testing.T) {
 	err := pub.Publish(ctx, "test", "test", amqp.Publishing{})
 	assert.Error(t, err)
 	assert.Equal(t, errors.Cause(err), ctx.Err())
+}
+
+func TestRetryPublisherDelaySetup(t *testing.T) {
+	conn := NewConnector(Config{})
+	pool := NewPool(conn)
+	ensurePub := NewEnsurePublisher(pool)
+
+	expected := 999 * time.Millisecond
+	pub := NewRetryPublisherWithDelay(ensurePub, expected)
+	assert.Equal(t, expected, pub.delay)
 }
 

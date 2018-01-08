@@ -2,6 +2,7 @@ package rabbitroutine
 
 import (
 	"context"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
@@ -37,13 +38,19 @@ func (p *EnsurePublisher) Publish(ctx context.Context, exchange, key string, msg
 
 	err = ch.Publish(exchange, key, false, false, msg)
 	if err != nil {
+		k.Close()
+
 		return errors.Wrap(err, "failed to publish message")
 	}
 
 	select {
 	case <-ctx.Done():
+		p.pool.Release(k)
+
 		return ctx.Err()
 	case amqpErr := <-k.Error():
+		k.Close()
+
 		return errors.Wrap(amqpErr, "failed to deliver a message")
 	case <-k.Confirm():
 		p.pool.Release(k)
@@ -57,11 +64,18 @@ func (p *EnsurePublisher) Publish(ctx context.Context, exchange, key string, msg
 // On error publisher will retry to publish msg.
 type RetryPublisher struct {
 	*EnsurePublisher
+	// delay define how long to wait before retry
+	delay time.Duration
 }
 
 // NewRetryPublisher return new instance of RetryPublisher.
 func NewRetryPublisher(p *EnsurePublisher) *RetryPublisher {
-	return &RetryPublisher{p}
+	return &RetryPublisher{p, 10 * time.Millisecond}
+}
+
+// NewRetryPublisherWithDelay return new instance of RetryPublisher with defined delay between retries.
+func NewRetryPublisherWithDelay(p *EnsurePublisher, delay time.Duration) *RetryPublisher {
+	return &RetryPublisher{p, delay}
 }
 
 // Publish is used to send msg to RabbitMQ exchange.
@@ -70,13 +84,18 @@ func (p *RetryPublisher) Publish(ctx context.Context, exchange, key string, msg 
 	for {
 		err := p.EnsurePublisher.Publish(ctx, exchange, key, msg)
 		if err != nil {
-			// If context error received then return it, else retry to publish.
+			// If context error occurs then return it, else retry to publish.
 			cuz := errors.Cause(err)
 			if cuz == context.Canceled || cuz == context.DeadlineExceeded {
 				return err
 			}
 
-			continue
+			select {
+			case <-time.After(p.delay):
+				continue
+			case <-ctx.Done():
+				return ctx.Err()
+			}
 		}
 
 		return nil
