@@ -67,7 +67,7 @@ go func() {
 }()
 ```
 
-[Full example demonstrates consuming messages](https://github.com/furdarius/rabbitroutine/blob/master/consumer_example_test.go)
+[Full example demonstrates messages consuming](https://github.com/furdarius/rabbitroutine/blob/master/consumer_example_test.go)
 
 
 ### Publising
@@ -105,7 +105,7 @@ if err != nil {
 
 ```
 
-[Full example demonstrates publishing messages](https://github.com/furdarius/rabbitroutine/blob/master/publisher_example_test.go)
+[Full example demonstrates messages publishing](https://github.com/furdarius/rabbitroutine/blob/master/publisher_example_test.go)
 
 ## Contributing
 
