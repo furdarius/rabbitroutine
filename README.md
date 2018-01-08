@@ -22,6 +22,14 @@ $ dep ensure -add github.com/furdarius/rabbitroutine
 
 
 ### Consuming
+You need to implement [Consumer](https://godoc.org/github.com/furdarius/rabbitroutine#Consumer) and register
+it with [StartConsumer](https://godoc.org/github.com/furdarius/rabbitroutine#Connector.StartConsumer)
+or with [StartMultipleConsumers](https://godoc.org/github.com/furdarius/rabbitroutine#Connector.StartMultipleConsumers).
+When connection is established (*at first time or after reconnect*) `Declare` method is called. It can be used to
+declare required RabbitMQ entities ([consumer example](https://github.com/furdarius/rabbitroutine/blob/master/consumer_example_test.go)). 
+
+
+Usage example:
 
 ```go
 
@@ -59,8 +67,17 @@ go func() {
 }()
 ```
 
+[Full example demonstrates consuming messages](https://github.com/furdarius/rabbitroutine/blob/master/consumer_example_test.go)
+
+
 ### Publising
 
+For publishing [RetryPublisher](https://godoc.org/github.com/furdarius/rabbitroutine#RetryPublisher)
+or [EnsurePublisher](https://godoc.org/github.com/furdarius/rabbitroutine#EnsurePublisher) implemented.
+Both wait before receiving server approve that message was successfully delivered.
+Or error `RetryPublisher` retry to publish message.
+
+Usage example:
 ```go
 ctx := context.Background()
 
@@ -88,7 +105,7 @@ if err != nil {
 
 ```
 
-You can find more powerful examples in "[examples](https://github.com/furdarius/rabbitroutine/tree/master/examples)" directory.
+[Full example demonstrates publishing messages](https://github.com/furdarius/rabbitroutine/blob/master/publisher_example_test.go)
 
 ## Contributing
 

@@ -32,7 +32,8 @@ func NewConnector(cfg Config) *Connector {
 }
 
 // StartMultipleConsumers is used to start Consumer "count" times.
-// Method Declare will be called once, and Consume will be called "count" times (one goroutine per call).
+// Method Declare will be called once, and Consume will be called "count" times (one goroutine per call)
+// so you can scale consumer horizontally.
 // It's blocking method.
 //
 // NOTE: It's blocking method.
