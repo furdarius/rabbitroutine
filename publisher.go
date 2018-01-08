@@ -45,7 +45,8 @@ func (p *EnsurePublisher) Publish(ctx context.Context, exchange, key string, msg
 
 	select {
 	case <-ctx.Done():
-		p.pool.Release(k)
+		// Do not release amqp Channel, because old confirmation will be waited.
+		k.Close()
 
 		return ctx.Err()
 	case amqpErr := <-k.Error():
@@ -80,16 +81,11 @@ func NewRetryPublisherWithDelay(p *EnsurePublisher, delay time.Duration) *RetryP
 
 // Publish is used to send msg to RabbitMQ exchange.
 // It will block until is either message is delivered or context has cancelled.
+// Error returned only if context was done.
 func (p *RetryPublisher) Publish(ctx context.Context, exchange, key string, msg amqp.Publishing) error {
 	for {
 		err := p.EnsurePublisher.Publish(ctx, exchange, key, msg)
 		if err != nil {
-			// If context error occurs then return it, else retry to publish.
-			cuz := errors.Cause(err)
-			if cuz == context.Canceled || cuz == context.DeadlineExceeded {
-				return err
-			}
-
 			select {
 			case <-time.After(p.delay):
 				continue

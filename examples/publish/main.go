@@ -19,7 +19,7 @@ func main() {
 		Username: "guest",
 		Password: "guest",
 		// Max reconnect attempts
-		Attempts: 20,
+		Attempts: 20000,
 		// How long wait between reconnect
 		Wait: 2 * time.Second,
 	})
@@ -28,15 +28,23 @@ func main() {
 	ensurePub := rabbitroutine.NewEnsurePublisher(pool)
 	pub := rabbitroutine.NewRetryPublisher(ensurePub)
 
-	// nolint: errcheck
-	go conn.Start(ctx)
+	go func() {
+		err := conn.Start(ctx)
+		if err != nil {
+			log.Println("failed to establish RabbitMQ connection:", err)
+		}
+	}()
 
-	for i := 1; i <= 5000; i++ {
-		err := pub.Publish(ctx, "myexch", "myqueue", amqp.Publishing{
+	for i := 0; i < 5000; i++ {
+		timeoutCtx, cancel := context.WithTimeout(ctx, 100 * time.Millisecond)
+
+		err := pub.Publish(timeoutCtx, "myexch", "myqueue", amqp.Publishing{
 			Body: []byte(fmt.Sprintf("message %d", i)),
 		})
 		if err != nil {
-			log.Println("publish error:", err)
+			log.Println("failed to publish:", err)
 		}
+
+		cancel()
 	}
 }

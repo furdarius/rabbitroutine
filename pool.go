@@ -32,10 +32,6 @@ func (k *ChannelKeeper) Confirm() <-chan amqp.Confirmation {
 
 // Close closes RabbitMQ channel stored in ChannelKeeper.
 func (k *ChannelKeeper) Close() {
-	if k.msgCh == nil {
-		return
-	}
-
 	_ = k.msgCh.Close()
 }
 
