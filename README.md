@@ -4,9 +4,9 @@
 [![Build Status](https://travis-ci.org/furdarius/rabbitroutine.svg?branch=master)](https://travis-ci.org/furdarius/rabbitroutine)
 [![Go Report Card](https://goreportcard.com/badge/github.com/furdarius/rabbitroutine)](https://goreportcard.com/report/github.com/furdarius/rabbitroutine)
 
-# Rabbitmq Failover Routine For You
+# Rabbitmq Failover Routine
 
-This is small library, that do RabbitMQ auto reconnect and publish retry routine for you.
+Small, user-friendly library for RabbitMQ with auto-reconnect and publish retry routine.
 
 ## Install
 ```
