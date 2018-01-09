@@ -33,7 +33,7 @@ Usage example:
 
 ```go
 
-// Consumer declare your own RabbitMQ consumer implement rabbitroutine.Consumer interface.
+// Consumer declares your own RabbitMQ consumer implementing rabbitroutine.Consumer interface.
 type Consumer struct {}
 func (c *Consumer) Declare(ctx context.Context, ch *amqp.Channel) error {}
 func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel) error {}
@@ -45,7 +45,7 @@ conn := rabbitroutine.NewConnector(rabbitroutine.Config{
     Password: "guest",
     // Max reconnect attempts
     Attempts: 20,
-    // How long wait between reconnect
+    // How long to wait between reconnect
     Wait: 2 * time.Second,
 })
 
@@ -88,7 +88,7 @@ conn := rabbitroutine.NewConnector(rabbitroutine.Config{
     Password: "guest",
     // Max reconnect attempts
     Attempts: 20,
-    // How long wait between reconnect
+    // How long to wait between reconnect
     Wait: 2 * time.Second,
 })
 

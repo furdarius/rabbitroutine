@@ -8,24 +8,24 @@ import (
 	"github.com/streadway/amqp"
 )
 
-// ChannelKeeper store AMQP Channel with Confirmation and Close chans.
+// ChannelKeeper stores AMQP Channel with Confirmation and Close chans.
 type ChannelKeeper struct {
 	msgCh     *amqp.Channel
 	errorCh   chan *amqp.Error
 	confirmCh chan amqp.Confirmation
 }
 
-// Channel returns a amqp.Channel stored in ChannelKeeper.
+// Channel return an amqp.Channel stored in ChannelKeeper.
 func (k *ChannelKeeper) Channel() *amqp.Channel {
 	return k.msgCh
 }
 
-// Error returns a channel that will receive amqp.Error when it occurs.
+// Error return a channel that will receive amqp.Error when it occurs.
 func (k *ChannelKeeper) Error() <-chan *amqp.Error {
 	return k.errorCh
 }
 
-// Confirm returns a channel that will receive amqp.Confirmation when it occurs.
+// Confirm return a channel that will receive amqp.Confirmation when it occurs.
 func (k *ChannelKeeper) Confirm() <-chan amqp.Confirmation {
 	return k.confirmCh
 }
@@ -42,14 +42,14 @@ type Pool struct {
 	set  []ChannelKeeper
 }
 
-// NewPool return new instance of Pool.
+// NewPool return a new instance of Pool.
 func NewPool(conn *Connector) *Pool {
 	return &Pool{
 		conn: conn,
 	}
 }
 
-// ChannelWithConfirm return ChannelKeeper with AMQP Channel into confirm mode.
+// ChannelWithConfirm return a ChannelKeeper with AMQP Channel into confirm mode.
 func (p *Pool) ChannelWithConfirm(ctx context.Context) (ChannelKeeper, error) {
 	var (
 		k   ChannelKeeper
@@ -82,7 +82,7 @@ func (p *Pool) Release(k ChannelKeeper) {
 	p.mx.Unlock()
 }
 
-// new return ChannelKeeper with new amqp.Channel into confirm mode.
+// new return a ChannelKeeper with new amqp.Channel into confirm mode.
 func (p *Pool) new(ctx context.Context) (ChannelKeeper, error) {
 	var keep ChannelKeeper
 

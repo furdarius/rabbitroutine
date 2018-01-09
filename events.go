@@ -13,7 +13,7 @@ type Retried struct {
 // Dialed is fired when connection was successfully established.
 type Dialed struct{}
 
-// AMQPNotified is fired when AMQP error receiving.
+// AMQPNotified is fired when AMQP error occurred.
 type AMQPNotified struct {
 	Error *amqp.Error
 }

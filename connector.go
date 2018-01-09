@@ -23,7 +23,7 @@ type Connector struct {
 	amqpnotifies []func(AMQPNotified)
 }
 
-// NewConnector return new instance of Connector.
+// NewConnector return a new instance of Connector.
 func NewConnector(cfg Config) *Connector {
 	return &Connector{
 		cfg:    cfg,

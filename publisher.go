@@ -20,7 +20,7 @@ type EnsurePublisher struct {
 	pool *Pool
 }
 
-// NewEnsurePublisher return new instance of EnsurePublisher.
+// NewEnsurePublisher return a new instance of EnsurePublisher.
 func NewEnsurePublisher(p *Pool) *EnsurePublisher {
 	return &EnsurePublisher{p}
 }
@@ -69,12 +69,12 @@ type RetryPublisher struct {
 	delay time.Duration
 }
 
-// NewRetryPublisher return new instance of RetryPublisher.
+// NewRetryPublisher return a new instance of RetryPublisher.
 func NewRetryPublisher(p *EnsurePublisher) *RetryPublisher {
 	return &RetryPublisher{p, 10 * time.Millisecond}
 }
 
-// NewRetryPublisherWithDelay return new instance of RetryPublisher with defined delay between retries.
+// NewRetryPublisherWithDelay return a new instance of RetryPublisher with defined delay between retries.
 func NewRetryPublisherWithDelay(p *EnsurePublisher, delay time.Duration) *RetryPublisher {
 	return &RetryPublisher{p, delay}
 }
