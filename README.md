@@ -70,7 +70,7 @@ go func() {
 [Full example demonstrates messages consuming](https://github.com/furdarius/rabbitroutine/blob/master/consumer_example_test.go)
 
 
-### Publising
+### Publishing
 
 For publishing [RetryPublisher](https://godoc.org/github.com/furdarius/rabbitroutine#RetryPublisher)
 or [EnsurePublisher](https://godoc.org/github.com/furdarius/rabbitroutine#EnsurePublisher) implemented.
