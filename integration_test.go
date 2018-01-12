@@ -14,7 +14,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var testCfg = integrationConfig()
+var (
+	testURL = integrationURLFromEnv()
+	testCfg = Config{
+		Attempts: 20000,
+		Wait:     5 * time.Second,
+	}
+)
 
 type FakeConsumer struct {
 	declareFn func(ctx context.Context, ch *amqp.Channel) error
@@ -35,7 +41,7 @@ func TestIntegrationEnsurePublisher_PublishSuccess(t *testing.T) {
 	conn := NewConnector(testCfg)
 
 	go func() {
-		err := conn.Start(ctx)
+		err := conn.Dial(ctx, testURL)
 		assert.NoError(t, err)
 	}()
 
@@ -65,7 +71,7 @@ func TestIntegrationRetryPublisher_PublishSuccess(t *testing.T) {
 	conn := NewConnector(testCfg)
 
 	go func() {
-		err := conn.Start(ctx)
+		err := conn.Dial(ctx, testURL)
 		assert.NoError(t, err)
 	}()
 
@@ -125,7 +131,7 @@ func TestIntegrationRetryPublisher_PublishedReceivingSuccess(t *testing.T) {
 	}
 
 	go func() {
-		err := conn.Start(ctx)
+		err := conn.Dial(ctx, testURL)
 		assert.NoError(t, err)
 	}()
 
@@ -163,7 +169,7 @@ func TestIntegrationRetryPublisher_ConcurrentPublishingSuccess(t *testing.T) {
 	pub := NewRetryPublisher(NewEnsurePublisher(pool))
 
 	go func() {
-		err := conn.Start(ctx)
+		err := conn.Dial(ctx, testURL)
 		assert.NoError(t, err)
 	}()
 
@@ -206,7 +212,7 @@ func TestIntegrationEnsurePublisher_PublishWithTimeoutError(t *testing.T) {
 	pub := NewEnsurePublisher(pool)
 
 	go func() {
-		err := conn.Start(ctx)
+		err := conn.Dial(ctx, testURL)
 		assert.NoError(t, err)
 	}()
 
@@ -238,7 +244,7 @@ func TestIntegrationEnsurePublisher_ConcurrentPublishWithTimeout(t *testing.T) {
 	pub := NewEnsurePublisher(pool)
 
 	go func() {
-		err := conn.Start(ctx)
+		err := conn.Dial(ctx, testURL)
 		assert.NoError(t, err)
 	}()
 
@@ -286,20 +292,4 @@ func integrationURLFromEnv() string {
 	}
 
 	return url
-}
-
-func integrationConfig() Config {
-	uri, err := amqp.ParseURI(integrationURLFromEnv())
-	if err != nil {
-		panic("failed to parse AMQP_URL")
-	}
-
-	return Config{
-		Host:     uri.Host,
-		Port:     uri.Port,
-		Username: uri.Username,
-		Password: uri.Password,
-		Attempts: 20000,
-		Wait:     5 * time.Second,
-	}
 }

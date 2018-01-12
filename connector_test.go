@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+	"github.com/streadway/amqp"
 )
 
 func TestContextDoneIsCorrectAndNotBlocking(t *testing.T) {
@@ -39,33 +40,32 @@ func TestContextDoneIsCorrectAndNotBlocking(t *testing.T) {
 	}
 }
 
-func TestStartIsBlocking(t *testing.T) {
+func TestDialIsBlocking(t *testing.T) {
 	conn := NewConnector(Config{
 		Attempts: 10,
 		Wait:     10 * time.Second,
 	})
 
-	// nolint: errcheck
 	go func() {
-		conn.Start(context.Background())
+		_ = conn.Dial(context.Background(), "")
 
-		panic("Start is not blocking")
+		panic("Dial is not blocking")
 	}()
 
 	<-time.After(5 * time.Millisecond)
 }
 
-func TestStartReturnErrorOnFailedReconnect(t *testing.T) {
+func TestDialReturnErrorOnFailedReconnect(t *testing.T) {
 	conn := NewConnector(Config{
 		Attempts: 1,
 		Wait:     time.Millisecond,
 	})
 
-	err := conn.Start(context.Background())
+	err := conn.Dial(context.Background(), "")
 	assert.Error(t, err)
 }
 
-func TestStartRespectContext(t *testing.T) {
+func TestDialRespectContext(t *testing.T) {
 	conn := NewConnector(Config{
 		Attempts: 100,
 		Wait:     5 * time.Minute,
@@ -74,7 +74,7 @@ func TestStartRespectContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	err := conn.Start(ctx)
+	err := conn.Dial(ctx, "")
 	assert.Error(t, err)
 	assert.Equal(t, errors.Cause(err), ctx.Err())
 }
@@ -90,7 +90,7 @@ func TestConnBroadcastRespectContext(t *testing.T) {
 	conn.connBroadcast(ctx)
 }
 
-func TestDialRespectContext(t *testing.T) {
+func TestDialWithItRespectContext(t *testing.T) {
 	defer time.AfterFunc(1*time.Second, func() { panic("dial don't respect context") }).Stop()
 
 	conn := NewConnector(Config{
@@ -101,7 +101,7 @@ func TestDialRespectContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	err := conn.dial(ctx)
+	err := conn.dialWithIt(ctx, "", amqp.Config{})
 	assert.Error(t, err)
 	assert.Equal(t, err, ctx.Err())
 }
@@ -114,7 +114,7 @@ func TestDialRetryFailed(t *testing.T) {
 		Wait:     1 * time.Millisecond,
 	})
 
-	err := conn.dial(context.Background())
+	err := conn.dialWithIt(context.Background(), "", amqp.Config{})
 	assert.Error(t, err)
 	assert.Nil(t, conn.conn)
 }

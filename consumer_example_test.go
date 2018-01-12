@@ -112,11 +112,9 @@ func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
 func ExampleConsumer() {
 	ctx := context.Background()
 
+	url := "amqp://guest:guest@127.0.0.1:5672/"
+
 	conn := rabbitroutine.NewConnector(rabbitroutine.Config{
-		Host:     "127.0.0.1",
-		Port:     5672,
-		Username: "guest",
-		Password: "guest",
 		// Max reconnect attempts
 		Attempts: 20,
 		// How long wait between reconnect
@@ -142,7 +140,7 @@ func ExampleConsumer() {
 	}
 
 	go func() {
-		err := conn.Start(ctx)
+		err := conn.Dial(ctx, url)
 		if err != nil {
 			log.Println("failed to establish RabbitMQ connection:", err)
 		}

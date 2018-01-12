@@ -21,11 +21,9 @@ var (
 func main() {
 	g, ctx := errgroup.WithContext(context.Background())
 
+	url := "amqp://guest:guest@127.0.0.1:5672/"
+
 	conn := rabbitroutine.NewConnector(rabbitroutine.Config{
-		Host:     "127.0.0.1",
-		Port:     5672,
-		Username: "guest",
-		Password: "guest",
 		// Max reconnect attempts
 		Attempts: 20,
 		// How long wait between reconnect
@@ -54,7 +52,7 @@ func main() {
 		log.Println("conn.Start starting")
 		defer log.Println("conn.Start finished")
 
-		return conn.Start(ctx)
+		return conn.Dial(ctx, url)
 	})
 
 	g.Go(func() error {

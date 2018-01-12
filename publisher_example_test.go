@@ -14,11 +14,9 @@ import (
 func ExamplePublisher() {
 	ctx := context.Background()
 
+	url := "amqp://guest:guest@127.0.0.1:5672/"
+
 	conn := rabbitroutine.NewConnector(rabbitroutine.Config{
-		Host:     "127.0.0.1",
-		Port:     5672,
-		Username: "guest",
-		Password: "guest",
 		// Max reconnect attempts
 		Attempts: 20000,
 		// How long wait between reconnect
@@ -30,7 +28,7 @@ func ExamplePublisher() {
 	pub := rabbitroutine.NewRetryPublisher(ensurePub)
 
 	go func() {
-		err := conn.Start(ctx)
+		err := conn.Dial(ctx, url)
 		if err != nil {
 			log.Println("failed to establish RabbitMQ connection:", err)
 		}

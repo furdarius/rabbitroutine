@@ -38,11 +38,9 @@ type Consumer struct {}
 func (c *Consumer) Declare(ctx context.Context, ch *amqp.Channel) error {}
 func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel) error {}
 
+url := "amqp://guest:guest@127.0.0.1:5672/"
+
 conn := rabbitroutine.NewConnector(rabbitroutine.Config{
-    Host:     "127.0.0.1",
-    Port:     5672,
-    Username: "guest",
-    Password: "guest",
     // Max reconnect attempts
     Attempts: 20,
     // How long to wait between reconnect
@@ -52,7 +50,7 @@ conn := rabbitroutine.NewConnector(rabbitroutine.Config{
 ctx := context.Background()
 
 go func() {
-    err := conn.Start(ctx)
+    err := conn.Dial(ctx, url)
     if err != nil {
     	log.Println(err)
     }
@@ -81,14 +79,12 @@ Usage example:
 ```go
 ctx := context.Background()
 
+url := "amqp://guest:guest@127.0.0.1:5672/"
+
 conn := rabbitroutine.NewConnector(rabbitroutine.Config{
-    Host:     "127.0.0.1",
-    Port:     5672,
-    Username: "guest",
-    Password: "guest",
     // Max reconnect attempts
     Attempts: 20,
-    // How long to wait between reconnect
+    // How long wait between reconnect
     Wait: 2 * time.Second,
 })
 
@@ -96,7 +92,7 @@ pool := rabbitroutine.NewPool(conn)
 ensurePub := rabbitroutine.NewEnsurePublisher(pool)
 pub := rabbitroutine.NewRetryPublisher(ensurePub)
 
-go conn.Start(ctx)
+go conn.Dial(ctx, url)
 
 err := pub.Publish(ctx, "myexch", "myqueue", amqp.Publishing{Body: []byte("message")})
 if err != nil {

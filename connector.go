@@ -9,9 +9,23 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// Connector do all rabbitmq failover routine for you.
+const (
+	defaultHeartbeat = 10 * time.Second
+	defaultLocale    = "en_US"
+)
+
+// Config stores reconnect options.
+type Config struct {
+	// Max reconnect attempts.
+	Attempts int
+	// How long to wait between reconnect.
+	Wait time.Duration
+}
+
+// Connector implement RabbitMQ failover.
 type Connector struct {
-	cfg    Config
+	cfg Config
+
 	conn   *amqp.Connection
 	connCh chan *amqp.Connection
 
@@ -200,14 +214,14 @@ func (c *Connector) emitAMQPNotified(n AMQPNotified) {
 	}
 }
 
-// dial attempts to connect to rabbitmq.
-func (c *Connector) dial(ctx context.Context) error {
+// dialWithIt try to connect to RabbitMQ.
+// On error it will reconnect.
+// If maximum retry count exceeded error will return.
+func (c *Connector) dialWithIt(ctx context.Context, url string, config amqp.Config) error {
 	var err error
 
-	url := c.cfg.URL()
-
 	for i := 1; i <= c.cfg.Attempts; i++ {
-		c.conn, err = amqp.Dial(url)
+		c.conn, err = amqp.DialConfig(url, config)
 		if err != nil {
 			c.emitRetried(Retried{i, err})
 
@@ -236,14 +250,27 @@ func (c *Connector) connBroadcast(ctx context.Context) {
 	}
 }
 
-// Start try to keep rabbitmq connection active
+// Dial will try to keep RabbitMQ connection active
 // by catching and handling connection errors.
 // It will return any error only if ctx was done.
 //
 // NOTE: It's blocking method.
-func (c *Connector) Start(ctx context.Context) error {
+func (c *Connector) Dial(ctx context.Context, url string) error {
+	return c.DialConfig(ctx, url, amqp.Config{
+		Heartbeat: defaultHeartbeat,
+		Locale:    defaultLocale,
+	})
+}
+
+// DialConfig used to configure RabbitMQ connection with amqp.Config.
+// It will try to keep RabbitMQ connection active
+// by catching and handling connection errors.
+// It will return any error only if ctx was done.
+//
+// NOTE: It's blocking method.
+func (c *Connector) DialConfig(ctx context.Context, url string, config amqp.Config) error {
 	for {
-		err := c.dial(ctx)
+		err := c.dialWithIt(ctx, url, config)
 		if err != nil {
 			return errors.WithMessage(err, "failed to dial")
 		}
@@ -276,7 +303,7 @@ func (c *Connector) Start(ctx context.Context) error {
 	}
 }
 
-// contextDone used to check was ctx.Done() channel closed.
+// contextDone used to check if ctx.Done() channel was closed.
 func contextDone(ctx context.Context) bool {
 	select {
 	case <-ctx.Done():
