@@ -96,7 +96,8 @@ func TestIntegrationRetryPublisher_PublishSuccess(t *testing.T) {
 }
 
 func TestIntegrationRetryPublisher_PublishedReceivingSuccess(t *testing.T) {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	conn := NewConnector(testCfg)
 	pool := NewPool(conn)
@@ -126,13 +127,18 @@ func TestIntegrationRetryPublisher_PublishedReceivingSuccess(t *testing.T) {
 
 			deliveriesCh <- content
 
+			// Wait for test finishing
+			<-ctx.Done()
+
 			return nil
 		},
 	}
 
 	go func() {
 		err := conn.Dial(ctx, testURL)
-		assert.NoError(t, err)
+		if err != nil && err != context.Canceled {
+			panic(err)
+		}
 	}()
 
 	ch, err := conn.Channel(ctx)
@@ -153,8 +159,10 @@ func TestIntegrationRetryPublisher_PublishedReceivingSuccess(t *testing.T) {
 	assert.NoError(t, err)
 
 	go func() {
-		err := conn.StartConsumer(ctx, consumer)
-		assert.NoError(t, err)
+		_ = conn.StartConsumer(ctx, consumer)
+		if err != nil && err != context.Canceled {
+			panic(err)
+		}
 	}()
 
 	actualMsg := <-deliveriesCh
