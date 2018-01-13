@@ -10,6 +10,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestEnsurePublisherImplementPublisher(t *testing.T) {
+	assert.Implements(t, (*Publisher)(nil), new(EnsurePublisher))
+}
+
+func TestRetryPublisherImplementPublisher(t *testing.T) {
+	assert.Implements(t, (*Publisher)(nil), new(RetryPublisher))
+}
+
 func TestEnsurePublisherRespectContext(t *testing.T) {
 	defer time.AfterFunc(1*time.Second, func() { panic("EnsurePublisher don't respect context") }).Stop()
 
@@ -51,4 +59,3 @@ func TestRetryPublisherDelaySetup(t *testing.T) {
 	pub := NewRetryPublisherWithDelay(ensurePub, expected)
 	assert.Equal(t, expected, pub.delay)
 }
-

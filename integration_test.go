@@ -42,7 +42,9 @@ func TestIntegrationEnsurePublisher_PublishSuccess(t *testing.T) {
 
 	go func() {
 		err := conn.Dial(ctx, testURL)
-		assert.NoError(t, err)
+		if err != nil {
+			panic(err)
+		}
 	}()
 
 	ch, err := conn.Channel(ctx)
@@ -72,7 +74,9 @@ func TestIntegrationRetryPublisher_PublishSuccess(t *testing.T) {
 
 	go func() {
 		err := conn.Dial(ctx, testURL)
-		assert.NoError(t, err)
+		if err != nil {
+			panic(err)
+		}
 	}()
 
 	ch, err := conn.Channel(ctx)
@@ -178,7 +182,9 @@ func TestIntegrationRetryPublisher_ConcurrentPublishingSuccess(t *testing.T) {
 
 	go func() {
 		err := conn.Dial(ctx, testURL)
-		assert.NoError(t, err)
+		if err != nil {
+			panic(err)
+		}
 	}()
 
 	testName := t.Name()
@@ -203,7 +209,9 @@ func TestIntegrationRetryPublisher_ConcurrentPublishingSuccess(t *testing.T) {
 	for i := 0; i < N; i++ {
 		go func() {
 			err := pub.Publish(ctx, testExchange, testQueue, amqp.Publishing{Body: []byte(testMsg)})
-			assert.NoError(t, err)
+			if err != nil {
+				panic(err)
+			}
 
 			wg.Done()
 		}()
@@ -221,7 +229,9 @@ func TestIntegrationEnsurePublisher_PublishWithTimeoutError(t *testing.T) {
 
 	go func() {
 		err := conn.Dial(ctx, testURL)
-		assert.NoError(t, err)
+		if err != nil {
+			panic(err)
+		}
 	}()
 
 	testName := t.Name()
@@ -253,7 +263,9 @@ func TestIntegrationEnsurePublisher_ConcurrentPublishWithTimeout(t *testing.T) {
 
 	go func() {
 		err := conn.Dial(ctx, testURL)
-		assert.NoError(t, err)
+		if err != nil {
+			panic(err)
+		}
 	}()
 
 	testName := t.Name()
@@ -283,7 +295,9 @@ func TestIntegrationEnsurePublisher_ConcurrentPublishWithTimeout(t *testing.T) {
 
 			err := pub.Publish(timeoutCtx, testExchange, testQueue, amqp.Publishing{Body: []byte(testMsg)})
 			if err != nil {
-				assert.Equal(t, errors.Cause(err), context.DeadlineExceeded)
+				if errors.Cause(err) != context.DeadlineExceeded {
+					panic(err)
+				}
 			}
 
 			wg.Done()

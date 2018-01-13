@@ -113,7 +113,7 @@ To run the integration tests, make sure you have RabbitMQ running on any host,
 export the environment variable `AMQP_URL=amqp://host/` and run `go test -tags
 integration`. As example:
 ```
-AMQP_URL=amqp://guest:guest@127.0.0.1:5672/ go test -v -race -tags integration -timeout 2s
+AMQP_URL=amqp://guest:guest@127.0.0.1:5672/ go test -v -race -cpu=1,2 -tags integration -timeout 2s
 ```
 
 Use `gometalinter` to check code with linters:
