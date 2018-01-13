@@ -17,7 +17,7 @@ func main() {
 
 	conn := rabbitroutine.NewConnector(rabbitroutine.Config{
 		// Max reconnect attempts
-		Attempts: 2,
+		Attempts: 20,
 		// How long wait between reconnect
 		Wait: 2 * time.Second,
 	})
@@ -33,7 +33,7 @@ func main() {
 		}
 	}()
 
-	for i := 0; i < 5000; i++ {
+	for i := 0; i < 500000; i++ {
 		timeoutCtx, cancel := context.WithTimeout(ctx, 100 * time.Millisecond)
 
 		err := pub.Publish(timeoutCtx, "myexch", "myqueue", amqp.Publishing{

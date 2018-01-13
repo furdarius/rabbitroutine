@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
 	"github.com/streadway/amqp"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestContextDoneIsCorrectAndNotBlocking(t *testing.T) {
@@ -91,7 +91,7 @@ func TestConnBroadcastRespectContext(t *testing.T) {
 }
 
 func TestDialWithItRespectContext(t *testing.T) {
-	defer time.AfterFunc(1*time.Second, func() { panic("dial don't respect context") }).Stop()
+	defer time.AfterFunc(1*time.Second, func() { panic("dialWithIt don't respect context") }).Stop()
 
 	conn := NewConnector(Config{
 		Attempts: 100,
@@ -106,8 +106,8 @@ func TestDialWithItRespectContext(t *testing.T) {
 	assert.Equal(t, err, ctx.Err())
 }
 
-func TestDialRetryFailed(t *testing.T) {
-	defer time.AfterFunc(1*time.Second, func() { panic("dial don't respect context") }).Stop()
+func TestDialWithItRetryFailed(t *testing.T) {
+	defer time.AfterFunc(1*time.Second, func() { panic("dialWithIt don't respect context") }).Stop()
 
 	conn := NewConnector(Config{
 		Attempts: 3,

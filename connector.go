@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
 	"golang.org/x/sync/errgroup"
+	"sync"
 )
 
 const (
@@ -100,6 +101,8 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 				break
 			}
 
+			var once sync.Once
+
 			closeCh := consumeChannel.NotifyClose(make(chan *amqp.Error, 1))
 
 			// Start two goroutine: one for consuming and second for close notification receiving.
@@ -113,10 +116,20 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 				// nolint: vetshadow
 				err := consumer.Consume(consumeCtx, consumeChannel)
 				if err != nil {
+					return errors.Wrap(err, "failed to consume")
+				}
+
+				err = consumeChannel.Close()
+				if err != nil && err != amqp.ErrClosed {
 					return err
 				}
 
-				return consumeChannel.Close()
+				var closeErr error
+				once.Do(func() {
+					closeErr = consumeChannel.Close()
+				})
+
+				return closeErr
 			})
 
 			g.Go(func() error {
@@ -134,9 +147,13 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 					stopErr = amqpErr
 				}
 
-				err := consumeChannel.Close()
-				if err != nil {
-					return err
+				var closeErr error
+				once.Do(func() {
+					closeErr = consumeChannel.Close()
+				})
+
+				if closeErr != nil {
+					return closeErr
 				}
 
 				return stopErr
