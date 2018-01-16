@@ -18,7 +18,7 @@ func ExamplePublisher() {
 
 	conn := rabbitroutine.NewConnector(rabbitroutine.Config{
 		// Max reconnect attempts
-		Attempts: 20000,
+		ReconnectAttempts: 20000,
 		// How long wait between reconnect
 		Wait: 2 * time.Second,
 	})

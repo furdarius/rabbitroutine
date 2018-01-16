@@ -17,8 +17,8 @@ import (
 var (
 	testURL = integrationURLFromEnv()
 	testCfg = Config{
-		Attempts: 20000,
-		Wait:     5 * time.Second,
+		ReconnectAttempts: 20000,
+		Wait:              5 * time.Second,
 	}
 )
 

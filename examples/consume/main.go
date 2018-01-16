@@ -24,15 +24,13 @@ func main() {
 	url := "amqp://guest:guest@127.0.0.1:5672/"
 
 	conn := rabbitroutine.NewConnector(rabbitroutine.Config{
-		// Max reconnect attempts
-		Attempts: 20,
 		// How long wait between reconnect
 		Wait: 2 * time.Second,
 	})
 
 	conn.AddRetriedListener(func(r rabbitroutine.Retried) {
 		log.Printf("try to connect to RabbitMQ: attempt=%d, error=\"%v\"",
-			r.Attempt, r.Error)
+			r.ReconnectAttempt, r.Error)
 	})
 
 	conn.AddDialedListener(func(_ rabbitroutine.Dialed) {

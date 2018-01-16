@@ -6,8 +6,8 @@ import "github.com/streadway/amqp"
 // The event will be emitted only if the connection was not established.
 // If connection was successfully established Dialed event emitted.
 type Retried struct {
-	Attempt int
-	Error   error
+	ReconnectAttempt uint
+	Error            error
 }
 
 // Dialed is fired when connection was successfully established.

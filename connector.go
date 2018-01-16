@@ -2,12 +2,13 @@ package rabbitroutine
 
 import (
 	"context"
+	"math"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
 	"golang.org/x/sync/errgroup"
-	"sync"
 )
 
 const (
@@ -18,7 +19,7 @@ const (
 // Config stores reconnect options.
 type Config struct {
 	// Max reconnect attempts.
-	Attempts int
+	ReconnectAttempts uint
 	// How long to wait between reconnect.
 	Wait time.Duration
 }
@@ -40,6 +41,10 @@ type Connector struct {
 
 // NewConnector return a new instance of Connector.
 func NewConnector(cfg Config) *Connector {
+	if cfg.ReconnectAttempts == 0 {
+		cfg.ReconnectAttempts = math.MaxInt64
+	}
+
 	return &Connector{
 		cfg:    cfg,
 		connCh: make(chan *amqp.Connection),
@@ -237,7 +242,7 @@ func (c *Connector) emitAMQPNotified(n AMQPNotified) {
 func (c *Connector) dialWithIt(ctx context.Context, url string, config amqp.Config) error {
 	var err error
 
-	for i := 1; i <= c.cfg.Attempts; i++ {
+	for i := uint(1); i <= c.cfg.ReconnectAttempts; i++ {
 		c.conn, err = amqp.DialConfig(url, config)
 		if err != nil {
 			c.emitRetried(Retried{i, err})

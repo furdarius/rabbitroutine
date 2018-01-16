@@ -42,8 +42,8 @@ func TestContextDoneIsCorrectAndNotBlocking(t *testing.T) {
 
 func TestDialIsBlocking(t *testing.T) {
 	conn := NewConnector(Config{
-		Attempts: 10,
-		Wait:     10 * time.Second,
+		ReconnectAttempts: 10,
+		Wait:              10 * time.Second,
 	})
 
 	go func() {
@@ -57,8 +57,8 @@ func TestDialIsBlocking(t *testing.T) {
 
 func TestDialReturnErrorOnFailedReconnect(t *testing.T) {
 	conn := NewConnector(Config{
-		Attempts: 1,
-		Wait:     time.Millisecond,
+		ReconnectAttempts: 1,
+		Wait:              time.Millisecond,
 	})
 
 	err := conn.Dial(context.Background(), "")
@@ -67,8 +67,8 @@ func TestDialReturnErrorOnFailedReconnect(t *testing.T) {
 
 func TestDialRespectContext(t *testing.T) {
 	conn := NewConnector(Config{
-		Attempts: 100,
-		Wait:     5 * time.Minute,
+		ReconnectAttempts: 100,
+		Wait:              5 * time.Minute,
 	})
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -94,8 +94,8 @@ func TestDialWithItRespectContext(t *testing.T) {
 	defer time.AfterFunc(1*time.Second, func() { panic("dialWithIt don't respect context") }).Stop()
 
 	conn := NewConnector(Config{
-		Attempts: 100,
-		Wait:     5 * time.Minute,
+		ReconnectAttempts: 100,
+		Wait:              5 * time.Minute,
 	})
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -110,8 +110,8 @@ func TestDialWithItRetryFailed(t *testing.T) {
 	defer time.AfterFunc(1*time.Second, func() { panic("dialWithIt don't respect context") }).Stop()
 
 	conn := NewConnector(Config{
-		Attempts: 3,
-		Wait:     1 * time.Millisecond,
+		ReconnectAttempts: 3,
+		Wait:              1 * time.Millisecond,
 	})
 
 	err := conn.dialWithIt(context.Background(), "", amqp.Config{})
@@ -123,8 +123,8 @@ func TestChannelRespectContext(t *testing.T) {
 	defer time.AfterFunc(1*time.Second, func() { panic("Channel don't respect context") }).Stop()
 
 	conn := NewConnector(Config{
-		Attempts: 100,
-		Wait:     5 * time.Minute,
+		ReconnectAttempts: 100,
+		Wait:              5 * time.Minute,
 	})
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -133,4 +133,10 @@ func TestChannelRespectContext(t *testing.T) {
 	_, err := conn.Channel(ctx)
 	assert.Error(t, err)
 	assert.Equal(t, err, ctx.Err())
+}
+
+func TestConnectorCreationWithEmptyConfig(t *testing.T) {
+	conn := NewConnector(Config{})
+
+	assert.NotEqual(t, 0, conn.cfg.ReconnectAttempts)
 }

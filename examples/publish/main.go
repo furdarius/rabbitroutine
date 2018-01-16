@@ -17,7 +17,7 @@ func main() {
 
 	conn := rabbitroutine.NewConnector(rabbitroutine.Config{
 		// Max reconnect attempts
-		Attempts: 20,
+		ReconnectAttempts: 20,
 		// How long wait between reconnect
 		Wait: 2 * time.Second,
 	})
