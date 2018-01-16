@@ -1,6 +1,7 @@
 # 0.3.0
 - Rename Attempts to ReconnectAttempts in Connector config
 - Make zero value of ReconnectAttempts equal infinity.
+- Return error from ChannelKeeper Close method.
 
 # 0.2.1
 - On error once close amqp channel.

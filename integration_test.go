@@ -112,6 +112,7 @@ func TestIntegrationRetryPublisher_PublishedReceivingSuccess(t *testing.T) {
 	testQueue := testName + "_Queue"
 	testMsg := testName + "_Message"
 
+
 	deliveriesCh := make(chan string)
 
 	consumer := &FakeConsumer{
@@ -163,7 +164,7 @@ func TestIntegrationRetryPublisher_PublishedReceivingSuccess(t *testing.T) {
 	assert.NoError(t, err)
 
 	go func() {
-		_ = conn.StartConsumer(ctx, consumer)
+		err := conn.StartConsumer(ctx, consumer)
 		if err != nil && err != context.Canceled {
 			panic(err)
 		}

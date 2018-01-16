@@ -124,17 +124,16 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 					return errors.Wrap(err, "failed to consume")
 				}
 
-				err = consumeChannel.Close()
-				if err != nil && err != amqp.ErrClosed {
-					return err
-				}
-
 				var closeErr error
 				once.Do(func() {
 					closeErr = consumeChannel.Close()
 				})
 
-				return closeErr
+				if closeErr != nil && closeErr != amqp.ErrClosed {
+					return errors.Wrap(closeErr, "failed to close amqp channel")
+				}
+
+				return nil
 			})
 
 			g.Go(func() error {
@@ -157,8 +156,8 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 					closeErr = consumeChannel.Close()
 				})
 
-				if closeErr != nil {
-					return closeErr
+				if closeErr != nil && closeErr != amqp.ErrClosed {
+					return errors.Wrap(closeErr, "failed to close amqp channel")
 				}
 
 				return stopErr
