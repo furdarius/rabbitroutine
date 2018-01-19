@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/furdarius/rabbitroutine"
-	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
 )
 
@@ -32,7 +31,9 @@ func (c *Consumer) Declare(ctx context.Context, ch *amqp.Channel) error {
 		nil,            // arguments
 	)
 	if err != nil {
-		return errors.WithMessage(err, "failed to declare "+c.ExchangeName)
+		log.Printf("failed to declare exchange %v: %v", c.ExchangeName, err)
+
+		return err
 	}
 
 	_, err = ch.QueueDeclare(
@@ -44,7 +45,9 @@ func (c *Consumer) Declare(ctx context.Context, ch *amqp.Channel) error {
 		nil,         // arguments
 	)
 	if err != nil {
-		return errors.WithMessage(err, "failed to declare "+c.QueueName)
+		log.Printf("failed to declare queue %v: %v", c.QueueName, err)
+
+		return err
 	}
 
 	err = ch.QueueBind(
@@ -55,7 +58,9 @@ func (c *Consumer) Declare(ctx context.Context, ch *amqp.Channel) error {
 		nil,            // arguments
 	)
 	if err != nil {
-		return errors.WithMessage(err, "failed to bind "+c.QueueName+" to "+c.ExchangeName)
+		log.Printf("failed to bind queue %v: %v", c.QueueName, err)
+
+		return err
 	}
 
 	return nil
@@ -71,7 +76,9 @@ func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
 		false, // global
 	)
 	if err != nil {
-		return errors.WithMessage(err, "failed to set qos")
+		log.Printf("failed to set qos: %v", err)
+
+		return err
 	}
 
 	msgs, err := ch.Consume(
@@ -84,7 +91,9 @@ func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
 		nil,          // args
 	)
 	if err != nil {
-		return errors.WithMessage(err, "failed to consume "+c.QueueName)
+		log.Printf("failed to consume %v: %v", c.QueueName, err)
+
+		return err
 	}
 
 	for {

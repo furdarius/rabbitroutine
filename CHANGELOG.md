@@ -1,3 +1,6 @@
+# 0.3.1
+- On error wait for c.cfg.Wait time before consumer restart.
+
 # 0.3.0
 - Rename Attempts to ReconnectAttempts in Connector config
 - Make zero value of ReconnectAttempts equal infinity.

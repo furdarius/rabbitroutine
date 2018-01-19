@@ -66,6 +66,15 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 			return lastErr
 		}
 
+		// On error wait for c.cfg.Wait time before consumer restart
+		if lastErr != nil {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(c.cfg.Wait):
+			}
+		}
+
 		// Use declareChannel only for consumer.Declare,
 		// and close it after successful declaring.
 		// nolint: vetshadow

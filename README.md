@@ -41,8 +41,6 @@ func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel) error {}
 url := "amqp://guest:guest@127.0.0.1:5672/"
 
 conn := rabbitroutine.NewConnector(rabbitroutine.Config{
-    // Max reconnect attempts
-    Attempts: 20,
     // How long to wait between reconnect
     Wait: 2 * time.Second,
 })
@@ -82,8 +80,6 @@ ctx := context.Background()
 url := "amqp://guest:guest@127.0.0.1:5672/"
 
 conn := rabbitroutine.NewConnector(rabbitroutine.Config{
-    // Max reconnect attempts
-    Attempts: 20,
     // How long wait between reconnect
     Wait: 2 * time.Second,
 })
