@@ -1,3 +1,9 @@
+# 0.4.0 | [Pull request](https://github.com/furdarius/rabbitroutine/pull/3)
+- [LightningPool](https://godoc.org/github.com/furdarius/rabbitroutine#LightningPool) added.
+- [FireForgetPublisher](https://godoc.org/github.com/furdarius/rabbitroutine#FireForgetPublisher) added.
+- Possible deadlock on channel receiving from Dialed event listener fixed.
+- [RetryPublisher](https://godoc.org/github.com/furdarius/rabbitroutine#RetryPublisher) accepts [Publisher](https://godoc.org/github.com/furdarius/rabbitroutine#Publisher) interface now.
+
 # 0.3.1
 - On error wait for c.cfg.Wait time before consumer restart.
 

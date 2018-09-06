@@ -10,12 +10,32 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestFireForgetPublisherImplementPublisher(t *testing.T) {
+	assert.Implements(t, (*Publisher)(nil), new(FireForgetPublisher))
+}
+
 func TestEnsurePublisherImplementPublisher(t *testing.T) {
 	assert.Implements(t, (*Publisher)(nil), new(EnsurePublisher))
 }
 
 func TestRetryPublisherImplementPublisher(t *testing.T) {
 	assert.Implements(t, (*Publisher)(nil), new(RetryPublisher))
+}
+
+func TestFireForgetPublisherRespectContext(t *testing.T) {
+	defer time.AfterFunc(1*time.Second, func() { panic("FireForgetPublisher don't respect context") }).Stop()
+
+	conn := NewConnector(Config{})
+	pool := NewLightningPool(conn)
+
+	pub := FireForgetPublisher{pool}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := pub.Publish(ctx, "test", "test", amqp.Publishing{})
+	assert.Error(t, err)
+	assert.Equal(t, errors.Cause(err), ctx.Err())
 }
 
 func TestEnsurePublisherRespectContext(t *testing.T) {
