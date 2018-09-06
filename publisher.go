@@ -40,7 +40,7 @@ func (p *EnsurePublisher) Publish(ctx context.Context, exchange, key string, msg
 
 	err = ch.Publish(exchange, key, false, false, msg)
 	if err != nil {
-		_ = k.Close()
+		_ = k.Close() //nolint: gosec
 
 		return errors.Wrap(err, "failed to publish message")
 	}
@@ -48,11 +48,11 @@ func (p *EnsurePublisher) Publish(ctx context.Context, exchange, key string, msg
 	select {
 	case <-ctx.Done():
 		// Do not return to pool, because old confirmation will be waited.
-		_ = k.Close()
+		_ = k.Close() //nolint: gosec
 
 		return ctx.Err()
 	case amqpErr := <-k.Error():
-		_ = k.Close()
+		_ = k.Close() //nolint: gosec
 
 		return errors.Wrap(amqpErr, "failed to deliver a message")
 	case <-k.Confirm():
@@ -83,7 +83,7 @@ func (p *FireForgetPublisher) Publish(ctx context.Context, exchange, key string,
 
 	err = ch.Publish(exchange, key, false, false, msg)
 	if err != nil {
-		_ = ch.Close()
+		_ = ch.Close() //nolint: gosec
 
 		return errors.Wrap(err, "failed to publish message")
 	}

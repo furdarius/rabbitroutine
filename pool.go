@@ -95,7 +95,7 @@ func (p *Pool) new(ctx context.Context) (ChannelKeeper, error) {
 
 	err = ch.Confirm(false)
 	if err != nil {
-		_ = ch.Close()
+		_ = ch.Close() //nolint: gosec
 
 		return keep, errors.Wrap(err, "failed to setup confirm mode for channel")
 	}

@@ -1,4 +1,4 @@
-# 0.4.0
+# 0.4.0 | [Pull request](https://github.com/furdarius/rabbitroutine/pull/3)
 - [LightningPool](https://godoc.org/github.com/furdarius/rabbitroutine#LightningPool) added.
 - [FireForgetPublisher](https://godoc.org/github.com/furdarius/rabbitroutine#FireForgetPublisher) added.
 - Possible deadlock on channel receiving from Dialed event listener fixed.
