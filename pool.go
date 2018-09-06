@@ -15,17 +15,17 @@ type ChannelKeeper struct {
 	confirmCh chan amqp.Confirmation
 }
 
-// Channel return an amqp.Channel stored in ChannelKeeper.
+// Channel returns an amqp.Channel stored in ChannelKeeper.
 func (k *ChannelKeeper) Channel() *amqp.Channel {
 	return k.msgCh
 }
 
-// Error return a channel that will receive amqp.Error when it occurs.
+// Error returns a channel that will receive amqp.Error when it occurs.
 func (k *ChannelKeeper) Error() <-chan *amqp.Error {
 	return k.errorCh
 }
 
-// Confirm return a channel that will receive amqp.Confirmation when it occurs.
+// Confirm returns a channel that will receive amqp.Confirmation when it occurs.
 func (k *ChannelKeeper) Confirm() <-chan amqp.Confirmation {
 	return k.confirmCh
 }
@@ -42,14 +42,14 @@ type Pool struct {
 	set  []ChannelKeeper
 }
 
-// NewPool return a new instance of Pool.
+// NewPool returns a new instance of Pool.
 func NewPool(conn *Connector) *Pool {
 	return &Pool{
 		conn: conn,
 	}
 }
 
-// ChannelWithConfirm return a ChannelKeeper with AMQP Channel into confirm mode.
+// ChannelWithConfirm returns a ChannelKeeper with AMQP Channel into confirm mode.
 func (p *Pool) ChannelWithConfirm(ctx context.Context) (ChannelKeeper, error) {
 	var (
 		k   ChannelKeeper
@@ -82,7 +82,7 @@ func (p *Pool) Release(k ChannelKeeper) {
 	p.mx.Unlock()
 }
 
-// new return a ChannelKeeper with new amqp.Channel into confirm mode.
+// new returns a ChannelKeeper with new amqp.Channel into confirm mode.
 func (p *Pool) new(ctx context.Context) (ChannelKeeper, error) {
 	var keep ChannelKeeper
 
@@ -103,4 +103,68 @@ func (p *Pool) new(ctx context.Context) (ChannelKeeper, error) {
 	publishCh := ch.NotifyPublish(make(chan amqp.Confirmation, 1))
 
 	return ChannelKeeper{ch, closeCh, publishCh}, nil
+}
+
+// Size returns current pool size.
+// note: not thread-safe operation.
+func (p *Pool) Size() int {
+	return len(p.set)
+}
+
+// LightningPool stores AMQP Channels without confirm mode, so they will be used without delivery guarantees.
+type LightningPool struct {
+	conn *Connector
+	mx   sync.Mutex
+	set  []*amqp.Channel
+}
+
+// NewLightningPool return a new instance of LightningPool.
+func NewLightningPool(conn *Connector) *LightningPool {
+	return &LightningPool{
+		conn: conn,
+	}
+}
+
+// Channel return AMQP Channel.
+func (p *LightningPool) Channel(ctx context.Context) (*amqp.Channel, error) {
+	var (
+		k   *amqp.Channel
+		err error
+	)
+
+	p.mx.Lock()
+	last := len(p.set) - 1
+	if last >= 0 {
+		k = p.set[last]
+		p.set = p.set[:last]
+	}
+	p.mx.Unlock()
+
+	// If pool is empty create new channel
+	if last < 0 {
+		k, err = p.new(ctx)
+		if err != nil {
+			return k, errors.Wrap(err, "failed to create new")
+		}
+	}
+
+	return k, nil
+}
+
+// Release adds k to the pool.
+func (p *LightningPool) Release(k *amqp.Channel) {
+	p.mx.Lock()
+	p.set = append(p.set, k)
+	p.mx.Unlock()
+}
+
+// new returns new amqp.Channel.
+func (p *LightningPool) new(ctx context.Context) (*amqp.Channel, error) {
+	return p.conn.Channel(ctx)
+}
+
+// Size returns current pool size.
+// note: not thread-safe operation.
+func (p *LightningPool) Size() int {
+	return len(p.set)
 }

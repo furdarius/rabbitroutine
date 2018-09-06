@@ -112,7 +112,6 @@ func TestIntegrationRetryPublisher_PublishedReceivingSuccess(t *testing.T) {
 	testQueue := testName + "_Queue"
 	testMsg := testName + "_Message"
 
-
 	deliveriesCh := make(chan string)
 
 	consumer := &FakeConsumer{
@@ -180,6 +179,53 @@ func TestIntegrationRetryPublisher_ConcurrentPublishingSuccess(t *testing.T) {
 	conn := NewConnector(testCfg)
 	pool := NewPool(conn)
 	pub := NewRetryPublisher(NewEnsurePublisher(pool))
+
+	go func() {
+		err := conn.Dial(ctx, testURL)
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	testName := t.Name()
+	testExchange := testName + "_Exchange"
+	testQueue := testName + "_Queue"
+	testMsg := testName + "_Message"
+
+	ch, err := conn.Channel(ctx)
+	assert.NoError(t, err, "failed to receive channel")
+	assert.NotNil(t, ch, "nil channel received")
+	defer ch.Close()
+
+	err = ch.ExchangeDeclare(testExchange, "direct", false, true, false, false, nil)
+	assert.NoError(t, err, "failed to declare exchange")
+
+	// Number of goroutine for concurrent publishing
+	N := 2
+
+	var wg sync.WaitGroup
+	wg.Add(N)
+
+	for i := 0; i < N; i++ {
+		go func() {
+			err := pub.Publish(ctx, testExchange, testQueue, amqp.Publishing{Body: []byte(testMsg)})
+			if err != nil {
+				panic(err)
+			}
+
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
+}
+
+func TestIntegrationRetryPublisherFireForget_ConcurrentPublishingSuccess(t *testing.T) {
+	ctx := context.Background()
+
+	conn := NewConnector(testCfg)
+	pool := NewLightningPool(conn)
+	pub := NewRetryPublisher(NewFireForgetPublisher(pool))
 
 	go func() {
 		err := conn.Dial(ctx, testURL)

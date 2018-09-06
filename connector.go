@@ -305,8 +305,6 @@ func (c *Connector) DialConfig(ctx context.Context, url string, config amqp.Conf
 			return errors.WithMessage(err, "failed to dial")
 		}
 
-		c.emitDialed(Dialed{})
-
 		// In the case of connection problems,
 		// we will get an error from closeCh
 		closeCh := c.conn.NotifyClose(make(chan *amqp.Error, 1))
@@ -314,6 +312,8 @@ func (c *Connector) DialConfig(ctx context.Context, url string, config amqp.Conf
 		broadcastCtx, cancel := context.WithCancel(ctx)
 		go c.connBroadcast(broadcastCtx)
 
+		c.emitDialed(Dialed{})
+		
 		select {
 		case <-ctx.Done():
 			cancel()
