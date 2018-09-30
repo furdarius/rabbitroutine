@@ -34,9 +34,9 @@ func main() {
 	}()
 
 	for i := 0; i < 500000; i++ {
-		timeoutCtx, cancel := context.WithTimeout(ctx, 100 * time.Millisecond)
+		timeoutCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
 
-		err := pub.Publish(timeoutCtx, "myexch", "myqueue", amqp.Publishing{
+		err := pub.Publish(timeoutCtx, "myexch", "myqueue", false, false, amqp.Publishing{
 			Body: []byte(fmt.Sprintf("message %d", i)),
 		})
 		if err != nil {

@@ -90,7 +90,7 @@ pub := rabbitroutine.NewRetryPublisher(ensurePub)
 
 go conn.Dial(ctx, url)
 
-err := pub.Publish(ctx, "myexch", "myqueue", amqp.Publishing{Body: []byte("message")})
+err := pub.Publish(ctx, "myexch", "myqueue", false, false, amqp.Publishing{Body: []byte("message")})
 if err != nil {
     log.Println("publish error:", err)
 }
