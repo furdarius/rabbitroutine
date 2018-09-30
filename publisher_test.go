@@ -33,7 +33,7 @@ func TestFireForgetPublisherRespectContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	err := pub.Publish(ctx, "test", "test", amqp.Publishing{})
+	err := pub.Publish(ctx, "test", "test", false, false, amqp.Publishing{})
 	assert.Error(t, err)
 	assert.Equal(t, errors.Cause(err), ctx.Err())
 }
@@ -49,7 +49,7 @@ func TestEnsurePublisherRespectContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	err := pub.Publish(ctx, "test", "test", amqp.Publishing{})
+	err := pub.Publish(ctx, "test", "test", false, false, amqp.Publishing{})
 	assert.Error(t, err)
 	assert.Equal(t, errors.Cause(err), ctx.Err())
 }
@@ -65,7 +65,7 @@ func TestRetryPublisherRespectContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	err := pub.Publish(ctx, "test", "test", amqp.Publishing{})
+	err := pub.Publish(ctx, "test", "test", false, false, amqp.Publishing{})
 	assert.Error(t, err)
 	assert.Equal(t, errors.Cause(err), ctx.Err())
 }

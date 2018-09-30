@@ -63,7 +63,7 @@ func TestIntegrationEnsurePublisher_PublishSuccess(t *testing.T) {
 	pool := NewPool(conn)
 	p := NewEnsurePublisher(pool)
 
-	err = p.Publish(ctx, testExchange, testQueue, amqp.Publishing{Body: []byte(testMsg)})
+	err = p.Publish(ctx, testExchange, testQueue, false, false, amqp.Publishing{Body: []byte(testMsg)})
 	assert.NoError(t, err, "failed to publish")
 }
 
@@ -95,7 +95,7 @@ func TestIntegrationRetryPublisher_PublishSuccess(t *testing.T) {
 	pool := NewPool(conn)
 	p := NewRetryPublisher(NewEnsurePublisher(pool))
 
-	err = p.Publish(ctx, testExchange, testQueue, amqp.Publishing{Body: []byte(testMsg)})
+	err = p.Publish(ctx, testExchange, testQueue, false, false, amqp.Publishing{Body: []byte(testMsg)})
 	assert.NoError(t, err, "failed to publish")
 }
 
@@ -159,7 +159,7 @@ func TestIntegrationRetryPublisher_PublishedReceivingSuccess(t *testing.T) {
 	err = ch.QueueBind(testQueue, testQueue, testExchange, false, nil)
 	assert.NoError(t, err)
 
-	err = pub.Publish(ctx, testExchange, testQueue, amqp.Publishing{Body: []byte(testMsg)})
+	err = pub.Publish(ctx, testExchange, testQueue, false, false, amqp.Publishing{Body: []byte(testMsg)})
 	assert.NoError(t, err)
 
 	go func() {
@@ -208,7 +208,7 @@ func TestIntegrationRetryPublisher_ConcurrentPublishingSuccess(t *testing.T) {
 
 	for i := 0; i < N; i++ {
 		go func() {
-			err := pub.Publish(ctx, testExchange, testQueue, amqp.Publishing{Body: []byte(testMsg)})
+			err := pub.Publish(ctx, testExchange, testQueue, false, false, amqp.Publishing{Body: []byte(testMsg)})
 			if err != nil {
 				panic(err)
 			}
@@ -255,7 +255,7 @@ func TestIntegrationRetryPublisherFireForget_ConcurrentPublishingSuccess(t *test
 
 	for i := 0; i < N; i++ {
 		go func() {
-			err := pub.Publish(ctx, testExchange, testQueue, amqp.Publishing{Body: []byte(testMsg)})
+			err := pub.Publish(ctx, testExchange, testQueue, false, false, amqp.Publishing{Body: []byte(testMsg)})
 			if err != nil {
 				panic(err)
 			}
@@ -297,7 +297,7 @@ func TestIntegrationEnsurePublisher_PublishWithTimeoutError(t *testing.T) {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 0)
 	defer cancel()
 
-	err = pub.Publish(timeoutCtx, testExchange, testQueue, amqp.Publishing{Body: []byte(testMsg)})
+	err = pub.Publish(timeoutCtx, testExchange, testQueue, false, false, amqp.Publishing{Body: []byte(testMsg)})
 	assert.Equal(t, errors.Cause(err), context.DeadlineExceeded)
 }
 
@@ -340,7 +340,7 @@ func TestIntegrationEnsurePublisher_ConcurrentPublishWithTimeout(t *testing.T) {
 			timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
 			defer cancel()
 
-			err := pub.Publish(timeoutCtx, testExchange, testQueue, amqp.Publishing{Body: []byte(testMsg)})
+			err := pub.Publish(timeoutCtx, testExchange, testQueue, false, false, amqp.Publishing{Body: []byte(testMsg)})
 			if err != nil {
 				if errors.Cause(err) != context.DeadlineExceeded {
 					panic(err)
