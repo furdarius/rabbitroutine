@@ -11,7 +11,7 @@ import (
 // Publisher interface provides functionality of publishing to RabbitMQ.
 type Publisher interface {
 	// Publish used to send msg to RabbitMQ exchange.
-	Publish(ctx context.Context, exchange, key string, msg amqp.Publishing) error
+	Publish(ctx context.Context, exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error
 }
 
 // EnsurePublisher implement Publisher interface and used to publish messages to RabbitMQ exchange.
@@ -30,7 +30,7 @@ func NewEnsurePublisher(p *Pool) *EnsurePublisher {
 // Publish sends msg to an exchange on the RabbitMQ
 // and wait to ensure that msg have successfully been received by the server.
 // It will block until is either message is successfully delivered, context has cancelled or error received.
-func (p *EnsurePublisher) Publish(ctx context.Context, exchange, key string, msg amqp.Publishing) error {
+func (p *EnsurePublisher) Publish(ctx context.Context, exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error {
 	k, err := p.pool.ChannelWithConfirm(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to receive channel for publishing")
@@ -38,7 +38,7 @@ func (p *EnsurePublisher) Publish(ctx context.Context, exchange, key string, msg
 
 	ch := k.Channel()
 
-	err = ch.Publish(exchange, key, false, false, msg)
+	err = ch.Publish(exchange, key, mandatory, immediate, msg)
 	if err != nil {
 		_ = k.Close() //nolint: gosec
 
@@ -75,13 +75,13 @@ func NewFireForgetPublisher(p *LightningPool) *FireForgetPublisher {
 }
 
 // Publish sends msg to an exchange on the RabbitMQ.
-func (p *FireForgetPublisher) Publish(ctx context.Context, exchange, key string, msg amqp.Publishing) error {
+func (p *FireForgetPublisher) Publish(ctx context.Context, exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error {
 	ch, err := p.pool.Channel(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to receive channel for publishing")
 	}
 
-	err = ch.Publish(exchange, key, false, false, msg)
+	err = ch.Publish(exchange, key, mandatory, immediate, msg)
 	if err != nil {
 		_ = ch.Close() //nolint: gosec
 
@@ -115,9 +115,9 @@ func NewRetryPublisherWithDelay(p Publisher, delay time.Duration) *RetryPublishe
 // Publish is used to send msg to RabbitMQ exchange.
 // It will block until is either message is delivered or context has cancelled.
 // Error returned only if context was done.
-func (p *RetryPublisher) Publish(ctx context.Context, exchange, key string, msg amqp.Publishing) error {
+func (p *RetryPublisher) Publish(ctx context.Context, exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error {
 	for {
-		err := p.Publisher.Publish(ctx, exchange, key, msg)
+		err := p.Publisher.Publish(ctx, exchange, key, mandatory, immediate, msg)
 		if err != nil {
 			select {
 			case <-time.After(p.delay):
