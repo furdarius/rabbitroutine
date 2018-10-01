@@ -309,14 +309,24 @@ func (c *Connector) DialConfig(ctx context.Context, url string, config amqp.Conf
 		// we will get an error from closeCh
 		closeCh := c.conn.NotifyClose(make(chan *amqp.Error, 1))
 
+
+		// After context cancellation we must wait for finishing of connBroadcast to avoid data race on c.conn.
+		var wg sync.WaitGroup
+		wg.Add(1)
+
 		broadcastCtx, cancel := context.WithCancel(ctx)
-		go c.connBroadcast(broadcastCtx)
+		go func() {
+			c.connBroadcast(broadcastCtx)
+
+			wg.Done()
+		}()
 
 		c.emitDialed(Dialed{})
-		
+
 		select {
 		case <-ctx.Done():
 			cancel()
+			wg.Wait()
 
 			err = c.conn.Close()
 			// It's not error if connection has already been closed.
@@ -327,6 +337,7 @@ func (c *Connector) DialConfig(ctx context.Context, url string, config amqp.Conf
 			return ctx.Err()
 		case amqpErr := <-closeCh:
 			cancel()
+			wg.Wait()
 
 			c.emitAMQPNotified(AMQPNotified{amqpErr})
 		}
