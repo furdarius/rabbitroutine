@@ -7,6 +7,17 @@
 # Rabbitmq Failover Routine
 
 Small, user-friendly library for RabbitMQ with auto-reconnect and publish retry routine.
+The library is designed to save the developer from the headache when working with RabbitMQ.
+
+**rabbitroutine** solves your RabbitMQ reconnection problems:
+* Handles connection errors and channels errors separately.
+* Takes into account the need to [re-declare](https://godoc.org/github.com/furdarius/rabbitroutine#Consumer) entities in RabbitMQ after reconnection.
+* Allow you to log [errors](https://godoc.org/github.com/furdarius/rabbitroutine#Connector.AddAMQPNotifiedListener) or connection [retry attempts](https://godoc.org/github.com/furdarius/rabbitroutine#Connector.AddRetriedListener).
+* Supports [FireAndForgetPublisher](https://godoc.org/github.com/furdarius/rabbitroutine#FireForgetPublisher) and [EnsurePublisher](https://godoc.org/github.com/furdarius/rabbitroutine#EnsurePublisher), that can be wrapped with [RetryPublisher](https://godoc.org/github.com/furdarius/rabbitroutine#RetryPublisher).
+* Supports pool of channels used for publishing.
+* Allow you to receive current channels pool size.
+
+**Stop to do wrappers, do features!**
 
 ## Install
 ```
@@ -68,10 +79,10 @@ go func() {
 
 ### Publishing
 
-For publishing [RetryPublisher](https://godoc.org/github.com/furdarius/rabbitroutine#RetryPublisher)
-or [EnsurePublisher](https://godoc.org/github.com/furdarius/rabbitroutine#EnsurePublisher) implemented.
-Both wait before receiving server approve that message was successfully delivered.
-Or error `RetryPublisher` retry to publish message.
+For publishing [FireForgetPublisher](https://godoc.org/github.com/furdarius/rabbitroutine#FireForgetPublisher)
+and [EnsurePublisher](https://godoc.org/github.com/furdarius/rabbitroutine#EnsurePublisher) implemented.
+Both of them can be wrapped with [RetryPublisher](https://godoc.org/github.com/furdarius/rabbitroutine#RetryPublisher)
+to repeat publishing on errors and mitigate short-term network problems.
 
 Usage example:
 ```go
