@@ -2,6 +2,7 @@ package rabbitroutine
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -59,6 +60,11 @@ func (p *EnsurePublisher) Publish(ctx context.Context, exchange, key string, man
 		p.pool.Release(k)
 
 		return nil
+
+	case r := <-k.Return():
+		p.pool.Release(k)
+
+		return fmt.Errorf("failed to delivery a message: %s", r.ReplyText)
 	}
 }
 

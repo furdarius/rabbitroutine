@@ -354,6 +354,52 @@ func TestIntegrationEnsurePublisher_ConcurrentPublishWithTimeout(t *testing.T) {
 	wg.Wait()
 }
 
+func TestIntegrationEnsurePublisher_PublishBasicReturnError(t *testing.T) {
+	ctx := context.Background()
+
+	conn := NewConnector(testCfg)
+	pool := NewPool(conn)
+	pub := NewEnsurePublisher(pool)
+
+	go func() {
+		err := conn.Dial(ctx, testURL)
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	testExchange := t.Name() + "_Exchange"
+	testQueue := t.Name() + "_Queue"
+	testMsg := t.Name() + "_Message"
+
+	ch, err := conn.Channel(ctx)
+	assert.NoError(t, err, "failed to receive channel")
+	assert.NotNil(t, ch, "nil channel received")
+	defer ch.Close()
+
+	err = ch.ExchangeDeclare(testExchange, "direct", false, true, false, false, nil)
+	assert.NoError(t, err, "failed to declare exchange")
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	err = pub.Publish(timeoutCtx, testExchange, "unbounded.key", true, false, amqp.Publishing{Body: []byte(testMsg)})
+	if assert.Error(t, err) {
+		assert.Contains(t, err.Error(), "NO_ROUTE")
+	}
+
+	_, err = ch.QueueDeclare(testQueue, false, true, false, false, nil)
+	assert.NoError(t, err)
+
+	err = ch.QueueBind(testQueue, "test", testExchange, false, nil)
+	assert.NoError(t, err)
+
+	err = pub.Publish(timeoutCtx, testExchange, "test", false, true, amqp.Publishing{Body: []byte(testMsg)})
+	if assert.Error(t, err) {
+		assert.Contains(t, err.Error(), "NO_ROUTE")
+	}
+}
+
 func integrationURLFromEnv() string {
 	url := os.Getenv("AMQP_URL")
 	if url == "" {

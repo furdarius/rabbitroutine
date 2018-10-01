@@ -13,6 +13,7 @@ type ChannelKeeper struct {
 	msgCh     *amqp.Channel
 	errorCh   chan *amqp.Error
 	confirmCh chan amqp.Confirmation
+	returnCh  chan amqp.Return
 }
 
 // Channel returns an amqp.Channel stored in ChannelKeeper.
@@ -28,6 +29,11 @@ func (k *ChannelKeeper) Error() <-chan *amqp.Error {
 // Confirm returns a channel that will receive amqp.Confirmation when it occurs.
 func (k *ChannelKeeper) Confirm() <-chan amqp.Confirmation {
 	return k.confirmCh
+}
+
+// Return returns a channel that will receive amqp.Return when it occurs.
+func (k *ChannelKeeper) Return() <-chan amqp.Return {
+	return k.returnCh
 }
 
 // Close closes RabbitMQ channel stored in ChannelKeeper.
@@ -102,7 +108,9 @@ func (p *Pool) new(ctx context.Context) (ChannelKeeper, error) {
 
 	publishCh := ch.NotifyPublish(make(chan amqp.Confirmation, 1))
 
-	return ChannelKeeper{ch, closeCh, publishCh}, nil
+	returnCh := ch.NotifyReturn(make(chan amqp.Return, 1))
+
+	return ChannelKeeper{ch, closeCh, publishCh, returnCh}, nil
 }
 
 // Size returns current pool size.
