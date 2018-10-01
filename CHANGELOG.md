@@ -1,3 +1,6 @@
+# 0.4.1 | [Pull request](https://github.com/furdarius/rabbitroutine/pull/6)
+- Data race fixed on c.conn when connection error occurs.
+
 # 0.4.0 | [Pull request](https://github.com/furdarius/rabbitroutine/pull/3)
 - [LightningPool](https://godoc.org/github.com/furdarius/rabbitroutine#LightningPool) added.
 - [FireForgetPublisher](https://godoc.org/github.com/furdarius/rabbitroutine#FireForgetPublisher) added.
