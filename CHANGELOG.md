@@ -1,3 +1,6 @@
+# 0.4.2 | [Pull request](https://github.com/furdarius/rabbitroutine/pull/7)
+- Fix compile error on Windows `GOOS=windows GOARCH=386 go build` ([issue](https://github.com/furdarius/rabbitroutine/issues/7))
+
 # 0.4.1 | [Pull request](https://github.com/furdarius/rabbitroutine/pull/6)
 - Data race fixed on c.conn when connection error occurs.
 
@@ -22,3 +25,4 @@
 - Dial and DialConfig were added. DialConfig used to configure RabbitMQ connection settings.
 - Config stores only reconnect options.
 - Start replaced with Dial.
+
