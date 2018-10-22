@@ -42,7 +42,7 @@ type Connector struct {
 // NewConnector return a new instance of Connector.
 func NewConnector(cfg Config) *Connector {
 	if cfg.ReconnectAttempts == 0 {
-		cfg.ReconnectAttempts = math.MaxInt64
+		cfg.ReconnectAttempts = math.MaxUint32
 	}
 
 	return &Connector{
@@ -308,7 +308,6 @@ func (c *Connector) DialConfig(ctx context.Context, url string, config amqp.Conf
 		// In the case of connection problems,
 		// we will get an error from closeCh
 		closeCh := c.conn.NotifyClose(make(chan *amqp.Error, 1))
-
 
 		// After context cancellation we must wait for finishing of connBroadcast to avoid data race on c.conn.
 		var wg sync.WaitGroup
