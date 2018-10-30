@@ -1,3 +1,9 @@
+# 0.5.0 | [Pull request](https://github.com/furdarius/rabbitroutine/pull/9)
+- [EnsurePublisher.Publish](https://godoc.org/github.com/furdarius/rabbitroutine#EnsurePublisher.Publish) returns [ErrNotFound](https://godoc.org/github.com/furdarius/rabbitroutine#ErrNotFound) if RabbitMQ entity (e.g. exchange) doesn't exist.
+- [EnsurePublisher.Publish](https://godoc.org/github.com/furdarius/rabbitroutine#EnsurePublisher.Publish) returns [ErrNoRoute](https://godoc.org/github.com/furdarius/rabbitroutine#ErrNoRoute) if message cannot be delivered to any queue.
+- Functional options for configuring RetryPublisher added.
+- NewRetryPublisherWithDelay deleted.
+
 # 0.4.2 | [Pull request](https://github.com/furdarius/rabbitroutine/pull/8)
 - Fix compile error on Windows `GOOS=windows GOARCH=386 go build` ([issue](https://github.com/furdarius/rabbitroutine/issues/7))
 

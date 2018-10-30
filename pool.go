@@ -13,6 +13,7 @@ type ChannelKeeper struct {
 	msgCh     *amqp.Channel
 	errorCh   chan *amqp.Error
 	confirmCh chan amqp.Confirmation
+	returnCh  chan amqp.Return
 }
 
 // Channel returns an amqp.Channel stored in ChannelKeeper.
@@ -28,6 +29,11 @@ func (k *ChannelKeeper) Error() <-chan *amqp.Error {
 // Confirm returns a channel that will receive amqp.Confirmation when it occurs.
 func (k *ChannelKeeper) Confirm() <-chan amqp.Confirmation {
 	return k.confirmCh
+}
+
+// Return returns a channel that will receive amqp.Return when it occurs.
+func (k *ChannelKeeper) Return() <-chan amqp.Return {
+	return k.returnCh
 }
 
 // Close closes RabbitMQ channel stored in ChannelKeeper.
@@ -84,25 +90,25 @@ func (p *Pool) Release(k ChannelKeeper) {
 
 // new returns a ChannelKeeper with new amqp.Channel into confirm mode.
 func (p *Pool) new(ctx context.Context) (ChannelKeeper, error) {
-	var keep ChannelKeeper
-
 	ch, err := p.conn.Channel(ctx)
 	if err != nil {
-		return keep, errors.Wrap(err, "failed to receive channel from connection")
+		return ChannelKeeper{}, errors.Wrap(err, "failed to receive channel from connection")
 	}
 
-	closeCh := ch.NotifyClose(make(chan *amqp.Error, 1))
+	errorCh := ch.NotifyClose(make(chan *amqp.Error, 1))
 
 	err = ch.Confirm(false)
 	if err != nil {
 		_ = ch.Close() //nolint: gosec
 
-		return keep, errors.Wrap(err, "failed to setup confirm mode for channel")
+		return ChannelKeeper{}, errors.Wrap(err, "failed to setup confirm mode for channel")
 	}
 
-	publishCh := ch.NotifyPublish(make(chan amqp.Confirmation, 1))
+	confirmCh := ch.NotifyPublish(make(chan amqp.Confirmation, 1))
 
-	return ChannelKeeper{ch, closeCh, publishCh}, nil
+	returnCh := ch.NotifyReturn(make(chan amqp.Return, 1))
+
+	return ChannelKeeper{ch, errorCh, confirmCh, returnCh}, nil
 }
 
 // Size returns current pool size.
