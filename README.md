@@ -97,7 +97,11 @@ conn := rabbitroutine.NewConnector(rabbitroutine.Config{
 
 pool := rabbitroutine.NewPool(conn)
 ensurePub := rabbitroutine.NewEnsurePublisher(pool)
-pub := rabbitroutine.NewRetryPublisher(ensurePub)
+pub := rabbitroutine.NewRetryPublisher(
+    ensurePub,
+    rabbitroutine.PublishMaxAttemptsSetup(16),
+    rabbitroutine.PublishDelaySetup(rabbitroutine.LinearDelay(10*time.Millisecond)),
+)
 
 go conn.Dial(ctx, url)
 
@@ -120,7 +124,7 @@ To run the integration tests, make sure you have RabbitMQ running on any host,
 export the environment variable `AMQP_URL=amqp://host/` and run `go test -tags
 integration`. As example:
 ```
-AMQP_URL=amqp://guest:guest@127.0.0.1:5672/ go test -v -race -cpu=1,2 -tags integration -timeout 2s
+AMQP_URL=amqp://guest:guest@127.0.0.1:5672/ go test -v -race -cpu=1,2 -tags integration -timeout 5s
 ```
 
 Use `gometalinter` to check code with linters:

@@ -34,7 +34,7 @@ type EnsurePublisher struct {
 
 // NewEnsurePublisher returns a new instance of EnsurePublisher.
 func NewEnsurePublisher(p *Pool) *EnsurePublisher {
-	return &EnsurePublisher{p}
+	return &EnsurePublisher{pool: p}
 }
 
 // Publish sends msg to an exchange on the RabbitMQ and wait to ensure
@@ -48,6 +48,13 @@ func (p *EnsurePublisher) Publish(ctx context.Context, exchange, key string, msg
 	}
 
 	err = p.publish(ctx, k, exchange, key, msg)
+
+	if err == ErrNoRoute {
+		p.pool.Release(k)
+
+		return err
+	}
+
 	if err != nil {
 		_ = k.Close() //nolint: gosec
 
@@ -80,6 +87,10 @@ func (p *EnsurePublisher) publish(ctx context.Context, k ChannelKeeper, exchange
 		return errors.Wrap(amqpErr, "failed to deliver a message")
 	case amqpRet := <-k.Return():
 		if amqpRet.ReplyCode == amqp.NoRoute {
+			// Unroutable mandatory or immediate messages are acknowledged immediately after
+			// any Channel.NotifyReturn listeners have been notified.
+			<-k.Confirm()
+
 			return ErrNoRoute
 		}
 
