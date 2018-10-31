@@ -47,44 +47,44 @@ func (p *EnsurePublisher) Publish(ctx context.Context, exchange, key string, msg
 		return errors.Wrap(err, "failed to receive channel for publishing")
 	}
 
+	err = p.publish(ctx, k, exchange, key, msg)
+	if err != nil {
+		_ = k.Close() //nolint: gosec
+
+		return err
+	}
+
+	p.pool.Release(k)
+
+	return nil
+}
+
+func (p *EnsurePublisher) publish(ctx context.Context, k ChannelKeeper, exchange, key string, msg amqp.Publishing) error {
 	ch := k.Channel()
 
 	mandatory := true
 	immediate := false
-	err = ch.Publish(exchange, key, mandatory, immediate, msg)
+	err := ch.Publish(exchange, key, mandatory, immediate, msg)
 	if err != nil {
-		_ = k.Close() //nolint: gosec
-
 		return errors.Wrap(err, "failed to publish message")
 	}
 
 	select {
 	case <-ctx.Done():
-		// Do not return to pool, because old confirmation will be waited.
-		_ = k.Close() //nolint: gosec
-
 		return ctx.Err()
 	case amqpErr := <-k.Error():
-		_ = k.Close() //nolint: gosec
-
 		if amqpErr.Code == amqp.NotFound {
 			return ErrNotFound
 		}
 
 		return errors.Wrap(amqpErr, "failed to deliver a message")
 	case amqpRet := <-k.Return():
-		// @apryabinkov: got strange behavior if return k to pool — next publish to exchange with unbound queue
-		// returns confirmation.
-		_ = k.Close() //nolint: gosec
-
 		if amqpRet.ReplyCode == amqp.NoRoute {
 			return ErrNoRoute
 		}
 
 		return fmt.Errorf("failed to deliver a message: %s", amqpRet.ReplyText)
 	case <-k.Confirm():
-		p.pool.Release(k)
-
 		return nil
 	}
 }
