@@ -12,10 +12,10 @@ The library is designed to save the developer from the headache when working wit
 **rabbitroutine** solves your RabbitMQ reconnection problems:
 * Handles connection errors and channels errors separately.
 * Takes into account the need to [re-declare](https://godoc.org/github.com/furdarius/rabbitroutine#Consumer) entities in RabbitMQ after reconnection.
-* Allow you to log [errors](https://godoc.org/github.com/furdarius/rabbitroutine#Connector.AddAMQPNotifiedListener) or connection [retry attempts](https://godoc.org/github.com/furdarius/rabbitroutine#Connector.AddRetriedListener).
+* Notifies of [errors](https://godoc.org/github.com/furdarius/rabbitroutine#Connector.AddAMQPNotifiedListener) and connection [retry attempts](https://godoc.org/github.com/furdarius/rabbitroutine#Connector.AddRetriedListener).
 * Supports [FireAndForgetPublisher](https://godoc.org/github.com/furdarius/rabbitroutine#FireForgetPublisher) and [EnsurePublisher](https://godoc.org/github.com/furdarius/rabbitroutine#EnsurePublisher), that can be wrapped with [RetryPublisher](https://godoc.org/github.com/furdarius/rabbitroutine#RetryPublisher).
 * Supports pool of channels used for publishing.
-* Allow you to receive current channels pool size.
+* Provides channels [pool size](https://godoc.org/github.com/furdarius/rabbitroutine#Pool.Size) statistics.
 
 **Stop to do wrappers, do features!**
 
@@ -97,7 +97,11 @@ conn := rabbitroutine.NewConnector(rabbitroutine.Config{
 
 pool := rabbitroutine.NewPool(conn)
 ensurePub := rabbitroutine.NewEnsurePublisher(pool)
-pub := rabbitroutine.NewRetryPublisher(ensurePub)
+pub := rabbitroutine.NewRetryPublisher(
+    ensurePub,
+    rabbitroutine.PublishMaxAttemptsSetup(16),
+    rabbitroutine.PublishDelaySetup(rabbitroutine.LinearDelay(10*time.Millisecond)),
+)
 
 go conn.Dial(ctx, url)
 
@@ -120,7 +124,7 @@ To run the integration tests, make sure you have RabbitMQ running on any host,
 export the environment variable `AMQP_URL=amqp://host/` and run `go test -tags
 integration`. As example:
 ```
-AMQP_URL=amqp://guest:guest@127.0.0.1:5672/ go test -v -race -cpu=1,2 -tags integration -timeout 2s
+AMQP_URL=amqp://guest:guest@127.0.0.1:5672/ go test -v -race -cpu=1,2 -tags integration -timeout 5s
 ```
 
 Use `gometalinter` to check code with linters:

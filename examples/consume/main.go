@@ -42,7 +42,7 @@ func main() {
 	})
 
 	consumer := &Consumer{
-		ExchangeName: "myexch",
+		ExchangeName: "myexchange",
 		QueueName:    "myqueue",
 	}
 

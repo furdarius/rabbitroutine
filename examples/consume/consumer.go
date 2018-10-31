@@ -37,9 +37,7 @@ func (c *Consumer) Declare(ctx context.Context, ch *amqp.Channel) error {
 		false,       // delete when unused
 		false,       // exclusive
 		false,       // no-wait
-		amqp.Table{
-			"x-max-length": int64(40),
-		},
+		nil,
 	)
 	if err != nil {
 		log.Printf("failed to declare queue %v: %v", c.QueueName, err)

@@ -60,6 +60,12 @@ func TestIntegrationEnsurePublisher_PublishSuccess(t *testing.T) {
 	err = ch.ExchangeDeclare(testExchange, "direct", false, true, false, false, nil)
 	assert.NoError(t, err, "failed to declare exchange")
 
+	_, err = ch.QueueDeclare(testQueue, false, false, false, false, nil)
+	assert.NoError(t, err)
+
+	err = ch.QueueBind(testQueue, testQueue, testExchange, false, nil)
+	assert.NoError(t, err)
+
 	pool := NewPool(conn)
 	p := NewEnsurePublisher(pool)
 
@@ -92,11 +98,54 @@ func TestIntegrationRetryPublisher_PublishSuccess(t *testing.T) {
 	err = ch.ExchangeDeclare(testExchange, "direct", false, true, false, false, nil)
 	assert.NoError(t, err, "failed to declare exchange")
 
+	_, err = ch.QueueDeclare(testQueue, false, false, false, false, nil)
+	assert.NoError(t, err)
+
+	err = ch.QueueBind(testQueue, testQueue, testExchange, false, nil)
+	assert.NoError(t, err)
+
 	pool := NewPool(conn)
 	p := NewRetryPublisher(NewEnsurePublisher(pool))
 
 	err = p.Publish(ctx, testExchange, testQueue, amqp.Publishing{Body: []byte(testMsg)})
 	assert.NoError(t, err, "failed to publish")
+}
+
+func TestIntegrationRetryPublisher_MaxAttemptsError(t *testing.T) {
+	ctx := context.Background()
+
+	conn := NewConnector(testCfg)
+
+	go func() {
+		err := conn.Dial(ctx, testURL)
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	ch, err := conn.Channel(ctx)
+	assert.NoError(t, err, "failed to receive channel")
+	assert.NotNil(t, ch, "nil channel received")
+	defer ch.Close()
+
+	testName := t.Name()
+	testExchange := testName + "_Exchange"
+	testQueue := testName + "_Queue"
+	testMsg := testName + "_Message"
+
+	err = ch.ExchangeDeclare(testExchange, "direct", false, true, false, false, nil)
+	assert.NoError(t, err, "failed to declare exchange")
+
+	pool := NewPool(conn)
+	p := NewRetryPublisher(
+		NewEnsurePublisher(pool),
+		PublishMaxAttemptsSetup(2),
+		PublishDelaySetup(LinearDelay(10*time.Millisecond)),
+	)
+
+	err = p.Publish(ctx, testExchange, testQueue, amqp.Publishing{Body: []byte(testMsg)})
+	assert.Error(t, err)
+	assert.Equal(t, ErrNoRoute, err)
 }
 
 func TestIntegrationRetryPublisher_PublishedReceivingSuccess(t *testing.T) {
@@ -200,6 +249,12 @@ func TestIntegrationRetryPublisher_ConcurrentPublishingSuccess(t *testing.T) {
 	err = ch.ExchangeDeclare(testExchange, "direct", false, true, false, false, nil)
 	assert.NoError(t, err, "failed to declare exchange")
 
+	_, err = ch.QueueDeclare(testQueue, false, false, false, false, nil)
+	assert.NoError(t, err)
+
+	err = ch.QueueBind(testQueue, testQueue, testExchange, false, nil)
+	assert.NoError(t, err)
+
 	// Number of goroutine for concurrent publishing
 	N := 2
 
@@ -246,6 +301,12 @@ func TestIntegrationRetryPublisherFireForget_ConcurrentPublishingSuccess(t *test
 
 	err = ch.ExchangeDeclare(testExchange, "direct", false, true, false, false, nil)
 	assert.NoError(t, err, "failed to declare exchange")
+
+	_, err = ch.QueueDeclare(testQueue, false, false, false, false, nil)
+	assert.NoError(t, err)
+
+	err = ch.QueueBind(testQueue, testQueue, testExchange, false, nil)
+	assert.NoError(t, err)
 
 	// Number of goroutine for concurrent publishing
 	N := 2
@@ -294,6 +355,12 @@ func TestIntegrationEnsurePublisher_PublishWithTimeoutError(t *testing.T) {
 	err = ch.ExchangeDeclare(testExchange, "direct", false, true, false, false, nil)
 	assert.NoError(t, err, "failed to declare exchange")
 
+	_, err = ch.QueueDeclare(testQueue, false, false, false, false, nil)
+	assert.NoError(t, err)
+
+	err = ch.QueueBind(testQueue, testQueue, testExchange, false, nil)
+	assert.NoError(t, err)
+
 	timeoutCtx, cancel := context.WithTimeout(ctx, 0)
 	defer cancel()
 
@@ -328,6 +395,12 @@ func TestIntegrationEnsurePublisher_ConcurrentPublishWithTimeout(t *testing.T) {
 	err = ch.ExchangeDeclare(testExchange, "direct", false, true, false, false, nil)
 	assert.NoError(t, err, "failed to declare exchange")
 
+	_, err = ch.QueueDeclare(testQueue, false, false, false, false, nil)
+	assert.NoError(t, err)
+
+	err = ch.QueueBind(testQueue, testQueue, testExchange, false, nil)
+	assert.NoError(t, err)
+
 	// Number of goroutine for concurrent publishing
 	N := 10
 
@@ -352,6 +425,51 @@ func TestIntegrationEnsurePublisher_ConcurrentPublishWithTimeout(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+func TestIntegrationEnsurePublisher_PublishNoRouteError(t *testing.T) {
+	ctx := context.Background()
+
+	conn := NewConnector(testCfg)
+	pool := NewPool(conn)
+	pub := NewEnsurePublisher(pool)
+
+	go func() {
+		err := conn.Dial(ctx, testURL)
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	testName := t.Name()
+	testExchange := testName + "_Exchange"
+	testQueue := testName + "_Queue"
+	testMsg := testName + "_Message"
+
+	ch, err := conn.Channel(ctx)
+	assert.NoError(t, err, "failed to receive channel")
+	assert.NotNil(t, ch, "nil channel received")
+	defer ch.Close()
+
+	err = ch.ExchangeDeclare(testExchange, "direct", false, true, false, false, nil)
+	assert.NoError(t, err, "failed to declare exchange")
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	err = pub.Publish(timeoutCtx, testExchange, "unbounded.key", amqp.Publishing{Body: []byte(testMsg)})
+	assert.Error(t, err)
+	assert.Equal(t, ErrNoRoute, err)
+
+	_, err = ch.QueueDeclare(testQueue, false, false, false, false, nil)
+	assert.NoError(t, err)
+
+	err = ch.QueueBind(testQueue, testQueue, testExchange, false, nil)
+	assert.NoError(t, err)
+
+	err = pub.Publish(timeoutCtx, testExchange, "unbounded.key", amqp.Publishing{Body: []byte(testMsg)})
+	assert.Error(t, err)
+	assert.Equal(t, ErrNoRoute, err)
 }
 
 func integrationURLFromEnv() string {
