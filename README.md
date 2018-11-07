@@ -1,4 +1,4 @@
-<p align="center"><img src="https://habrastorage.org/webt/qz/vc/u5/qzvcu51jywaflhacd-bysrrryly.png"></p>
+<p align="center"><img src="https://habrastorage.org/webt/-0/x1/z4/-0x1z48ndvvopw_baizloa6r1hs.png"></p>
 
 [![GoDoc](https://godoc.org/github.com/furdarius/rabbitroutine?status.svg)](https://godoc.org/github.com/furdarius/rabbitroutine)
 [![Build Status](https://travis-ci.org/furdarius/rabbitroutine.svg?branch=master)](https://travis-ci.org/furdarius/rabbitroutine)
