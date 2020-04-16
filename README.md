@@ -6,7 +6,7 @@
 
 # Rabbitmq Failover Routine
 
-Small, user-friendly library for RabbitMQ with auto-reconnect and publish retry routine.
+Lightweight library that handles RabbitMQ auto-reconnect and publishing retry routine for you.
 The library is designed to save the developer from the headache when working with RabbitMQ.
 
 **rabbitroutine** solves your RabbitMQ reconnection problems:
