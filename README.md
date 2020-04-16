@@ -116,20 +116,19 @@ if err != nil {
 
 ## Contributing
 
-Pull requests are very much welcomed.  Create your pull request on a non-master
-branch, make sure a test or example is included that covers your change and
+Pull requests are very much welcomed.  Create your pull request, make sure a test or example is included that covers your change and
 your commits represent coherent changes that include a reason for the change.
 
-To run the integration tests, make sure you have RabbitMQ running on any host,
+To run the integration tests, make sure you have RabbitMQ running on any host (e.g with `docker run --net=host -it --rm rabbitmq`), then
 export the environment variable `AMQP_URL=amqp://host/` and run `go test -tags
 integration`. As example:
 ```
 AMQP_URL=amqp://guest:guest@127.0.0.1:5672/ go test -v -race -cpu=1,2 -tags integration -timeout 5s
 ```
 
-Use `gometalinter` to check code with linters:
+Use [golangci-lint](https://github.com/golangci/golangci-lint) to check code with linters:
 ```
-gometalinter -t --vendor ./...
+golangci-lint run ./...
 ```
 
-TravisCI will also run the integration tests and gometalinter.
+TravisCI will also run the integration tests and golangci-lint.
