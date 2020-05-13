@@ -147,7 +147,7 @@ type RetryPublisher struct {
 	maxAttempts uint
 	// delayFn returns how long to wait before next retry
 	delayFn RetryDelayFunc
-	// retryAttemptContextKey, if non-empty, to add attempt uint value before calling innter publisher
+	// retryAttemptContextKey used to pass retry attempt count to inner publisher via context
 	retryAttemptContextKey string
 }
 
