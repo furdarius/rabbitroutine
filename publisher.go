@@ -147,14 +147,17 @@ type RetryPublisher struct {
 	maxAttempts uint
 	// delayFn returns how long to wait before next retry
 	delayFn RetryDelayFunc
+	// retryAttemptContextKey, if non-empty, to add attempt uint value before calling innter publisher
+	retryAttemptContextKey string
 }
 
 // NewRetryPublisher returns a new instance of RetryPublisherOption.
 func NewRetryPublisher(p Publisher, opts ...RetryPublisherOption) *RetryPublisher {
 	pub := &RetryPublisher{
-		Publisher:   p,
-		maxAttempts: math.MaxUint32,
-		delayFn:     ConstDelay(10 * time.Millisecond),
+		Publisher:              p,
+		maxAttempts:            math.MaxUint32,
+		delayFn:                ConstDelay(10 * time.Millisecond),
+		retryAttemptContextKey: "",
 	}
 
 	for _, option := range opts {
@@ -171,6 +174,9 @@ func (p *RetryPublisher) Publish(ctx context.Context, exchange, key string, msg 
 	var err error
 
 	for attempt := uint(1); attempt <= p.maxAttempts; attempt++ {
+		if p.retryAttemptContextKey != "" {
+			ctx = context.WithValue(ctx, p.retryAttemptContextKey, attempt)
+		}
 		err = p.Publisher.Publish(ctx, exchange, key, msg)
 		if err != nil {
 			select {
@@ -198,6 +204,13 @@ func PublishDelaySetup(fn RetryDelayFunc) RetryPublisherOption {
 func PublishMaxAttemptsSetup(maxAttempts uint) RetryPublisherOption {
 	return func(pub *RetryPublisher) {
 		pub.maxAttempts = maxAttempts
+	}
+}
+
+// PublishRetryAttemptContextKeySetup sets the key context key used to pass retry attempt uint to the inner publisher.
+func PublishRetryAttemptContextKeySetup(retryAttemptContextKey string) RetryPublisherOption {
+	return func(pub *RetryPublisher) {
+		pub.retryAttemptContextKey = retryAttemptContextKey
 	}
 }
 

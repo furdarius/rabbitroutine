@@ -96,6 +96,60 @@ func TestRetryPublisherMaxAttemptsSetup(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
+type retryAttemptCapturePublisher struct {
+	attempts               []interface{}
+	retryAttemptContextKey string
+}
+
+func (p *retryAttemptCapturePublisher) Publish(ctx context.Context, exchange, key string, msg amqp.Publishing) error {
+	p.attempts = append(p.attempts, ctx.Value(p.retryAttemptContextKey))
+	return errors.New("retryAttemptCapturePublisher.Publish always returns an error")
+}
+
+func TestRetryPublisherRetryAttemptContextKeySetup(t *testing.T) {
+	conn := NewConnector(Config{})
+	pool := NewPool(conn)
+	ensurePub := NewEnsurePublisher(pool)
+
+	expected := "retry-attempt"
+
+	pub := NewRetryPublisher(ensurePub, PublishRetryAttemptContextKeySetup(expected))
+
+	actual := pub.retryAttemptContextKey
+	assert.Equal(t, expected, actual)
+}
+
+func TestRetryPublisherPassesAttemptWhenContextKeySet(t *testing.T) {
+	retries := 3
+	retryAttemptContextKey := "retry-attempt"
+	retryAttemptCapturePub := &retryAttemptCapturePublisher{
+		retryAttemptContextKey: retryAttemptContextKey,
+	}
+
+	pub := NewRetryPublisher(retryAttemptCapturePub, PublishRetryAttemptContextKeySetup(retryAttemptContextKey), PublishMaxAttemptsSetup(uint(retries)))
+
+	ctx := context.Background()
+	err := pub.Publish(ctx, "test", "test", amqp.Publishing{})
+	assert.Error(t, err, "retryAttemptCapturePublisher should always return an error")
+
+	expected := []uint{1, 2, 3}
+	assert.ElementsMatch(t, expected, retryAttemptCapturePub.attempts)
+}
+
+func TestRetryPublisherDoesntPassAttemptWhenContextKeyNotSet(t *testing.T) {
+	retries := 3
+	retryAttemptCapturePub := &retryAttemptCapturePublisher{}
+
+	pub := NewRetryPublisher(retryAttemptCapturePub, PublishMaxAttemptsSetup(uint(retries)))
+
+	ctx := context.Background()
+	err := pub.Publish(ctx, "test", "test", amqp.Publishing{})
+	assert.Error(t, err, "retryAttemptCapturePublisher should always return an error")
+
+	expected := []interface{}{nil, nil, nil}
+	assert.ElementsMatch(t, expected, retryAttemptCapturePub.attempts)
+}
+
 func TestConstDelay(t *testing.T) {
 	tests := []struct {
 		delayFn  RetryDelayFunc
