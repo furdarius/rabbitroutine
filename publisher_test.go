@@ -97,36 +97,21 @@ func TestRetryPublisherMaxAttemptsSetup(t *testing.T) {
 }
 
 type retryAttemptCapturePublisher struct {
-	attempts               []interface{}
-	retryAttemptContextKey string
+	attempts []interface{}
 }
 
 func (p *retryAttemptCapturePublisher) Publish(ctx context.Context, exchange, key string, msg amqp.Publishing) error {
-	p.attempts = append(p.attempts, ctx.Value(p.retryAttemptContextKey))
+	retryAttempt, ok := RetryAttempt(ctx)
+	if ok {
+		p.attempts = append(p.attempts, retryAttempt)
+	}
 	return errors.New("retryAttemptCapturePublisher.Publish always returns an error")
 }
 
-func TestRetryPublisherRetryAttemptContextKeySetup(t *testing.T) {
-	conn := NewConnector(Config{})
-	pool := NewPool(conn)
-	ensurePub := NewEnsurePublisher(pool)
+func TestRetryPublisherPassesRetryAttemptInContext(t *testing.T) {
+	retryAttemptCapturePub := &retryAttemptCapturePublisher{}
 
-	expected := "retry-attempt"
-
-	pub := NewRetryPublisher(ensurePub, PublishRetryAttemptContextKeySetup(expected))
-
-	actual := pub.retryAttemptContextKey
-	assert.Equal(t, expected, actual)
-}
-
-func TestRetryPublisherPassesAttemptWhenContextKeySet(t *testing.T) {
-	retries := 3
-	retryAttemptContextKey := "retry-attempt"
-	retryAttemptCapturePub := &retryAttemptCapturePublisher{
-		retryAttemptContextKey: retryAttemptContextKey,
-	}
-
-	pub := NewRetryPublisher(retryAttemptCapturePub, PublishRetryAttemptContextKeySetup(retryAttemptContextKey), PublishMaxAttemptsSetup(uint(retries)))
+	pub := NewRetryPublisher(retryAttemptCapturePub, PublishMaxAttemptsSetup(3))
 
 	ctx := context.Background()
 	err := pub.Publish(ctx, "test", "test", amqp.Publishing{})
@@ -136,18 +121,16 @@ func TestRetryPublisherPassesAttemptWhenContextKeySet(t *testing.T) {
 	assert.ElementsMatch(t, expected, retryAttemptCapturePub.attempts)
 }
 
-func TestRetryPublisherDoesntPassAttemptWhenContextKeyNotSet(t *testing.T) {
-	retries := 3
-	retryAttemptCapturePub := &retryAttemptCapturePublisher{}
-
-	pub := NewRetryPublisher(retryAttemptCapturePub, PublishMaxAttemptsSetup(uint(retries)))
-
+func TestRetryAttempt(t *testing.T) {
 	ctx := context.Background()
-	err := pub.Publish(ctx, "test", "test", amqp.Publishing{})
-	assert.Error(t, err, "retryAttemptCapturePublisher should always return an error")
+	_, ok := RetryAttempt(ctx)
+	assert.False(t, ok)
 
-	expected := []interface{}{nil, nil, nil}
-	assert.ElementsMatch(t, expected, retryAttemptCapturePub.attempts)
+	retryAttempt := uint(3)
+	ctx = context.WithValue(ctx, retryAttemptContextKey, retryAttempt)
+	actual, ok := RetryAttempt(ctx)
+	assert.True(t, ok)
+	assert.Equal(t, retryAttempt, actual)
 }
 
 func TestConstDelay(t *testing.T) {
