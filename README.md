@@ -1,6 +1,6 @@
 <p align="center"><img src="https://habrastorage.org/webt/-0/x1/z4/-0x1z48ndvvopw_baizloa6r1hs.png"></p>
 
-[![GoDoc](https://godoc.org/github.com/furdarius/rabbitroutine?status.svg)](https://godoc.org/github.com/furdarius/rabbitroutine)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/furdarius/rabbitroutine)](https://pkg.go.dev/github.com/furdarius/rabbitroutine)
 [![Build Status](https://travis-ci.org/furdarius/rabbitroutine.svg?branch=master)](https://travis-ci.org/furdarius/rabbitroutine)
 [![Go Report Card](https://goreportcard.com/badge/github.com/furdarius/rabbitroutine)](https://goreportcard.com/report/github.com/furdarius/rabbitroutine)
 
