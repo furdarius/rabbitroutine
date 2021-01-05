@@ -18,9 +18,14 @@ const (
 
 // Config stores reconnect options.
 type Config struct {
-	// Max reconnect attempts.
+	// ReconnectAttempts is a number that defines how many reconnect attempts would be made after the connection was broke off.
+	// After a new connection have been established this number is reset.
+	// So, when a next broke off happens there will be not less than ReconnectAttempts attempts to reconnect.
+	// In case of maximum reconnect attempts exceeded* Dial or DialConfig func will just return error and that's it.
+	// It's your turn to handle this situation.
+	// But in generall it's better have unlimited ReconnectAttemts and log errors using Connector.AddRetriedListener (see examples dir)
 	ReconnectAttempts uint
-	// How long to wait between reconnect.
+	// How long to wait between reconnect attempts.
 	Wait time.Duration
 }
 

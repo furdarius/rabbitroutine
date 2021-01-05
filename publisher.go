@@ -41,6 +41,12 @@ func NewEnsurePublisher(p *Pool) *EnsurePublisher {
 // that msg have been successfully received by the server.
 // Returns error if no queue is bound that matches the routing key.
 // It will blocks until is either message is successfully delivered, context has cancelled or error received.
+//
+// While reconnecting is in process Publishing can't be finished, because amqp.Channel can't be received.
+// Publisher doesn't know about the state of the connection, so for publisher reconniction is the same as "request took too long to be finished".
+// "Too long" is defined by context.Context that is passed as first argument to Publish.
+// If context has been cancelled, Publish returns context.DeadlineExceeded error.
+// If connection was reestablished and Publish had enough time to be finished, then request would be finished successfully.
 func (p *EnsurePublisher) Publish(ctx context.Context, exchange, key string, msg amqp.Publishing) error {
 	k, err := p.pool.ChannelWithConfirm(ctx)
 	if err != nil {
