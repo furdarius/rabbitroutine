@@ -12,10 +12,11 @@ env:
  - AMQP_URL=amqp://guest:guest@127.0.0.1:5672/
 
 before_install:
+  - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
   - docker run -d --net=host --rm rabbitmq
 
 install:
-  - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.24.0
+  - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.34.1
   - go get -t -v ./...
 
 script:
