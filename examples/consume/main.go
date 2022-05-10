@@ -8,8 +8,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/furdarius/rabbitroutine"
 	"github.com/pkg/errors"
+	darkmq "github.com/sagleft/darkrmq"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -23,21 +23,21 @@ func main() {
 
 	url := "amqp://guest:guest@127.0.0.1:5672/"
 
-	conn := rabbitroutine.NewConnector(rabbitroutine.Config{
+	conn := darkmq.NewConnector(darkmq.Config{
 		// How long wait between reconnect
 		Wait: 2 * time.Second,
 	})
 
-	conn.AddRetriedListener(func(r rabbitroutine.Retried) {
+	conn.AddRetriedListener(func(r darkmq.Retried) {
 		log.Printf("try to connect to RabbitMQ: attempt=%d, error=\"%v\"",
 			r.ReconnectAttempt, r.Error)
 	})
 
-	conn.AddDialedListener(func(_ rabbitroutine.Dialed) {
+	conn.AddDialedListener(func(_ darkmq.Dialed) {
 		log.Printf("RabbitMQ connection successfully established")
 	})
 
-	conn.AddAMQPNotifiedListener(func(n rabbitroutine.AMQPNotified) {
+	conn.AddAMQPNotifiedListener(func(n darkmq.AMQPNotified) {
 		log.Printf("RabbitMQ error received: %v", n.Error)
 	})
 
