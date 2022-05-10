@@ -63,10 +63,30 @@ func NewConnector(cfg Config) *Connector {
 //
 // NOTE: It's blocking method.
 // nolint: gocyclo
-func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consumer, count int) error {
+func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consumer, count int, stopCh ...chan struct{}) error {
 	var lastErr error
+	var reconnectConsumers bool = true
+	var channels []*amqp.Channel = make([]*amqp.Channel, 0)
 
-	for {
+	if len(stopCh) > 0 {
+		go func() {
+			<-stopCh[0]
+			reconnectConsumers = false
+
+			// close channels
+			for _, ch := range channels {
+				if ch == nil {
+					continue
+				}
+				err := ch.Close()
+				if err != nil {
+					lastErr = errors.WithMessage(err, "failed to close channel")
+				}
+			}
+		}()
+	}
+
+	for reconnectConsumers {
 		if contextDone(ctx) {
 			return lastErr
 		}
@@ -107,6 +127,7 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 		var g errgroup.Group
 
 		consumeCtx, cancel := context.WithCancel(ctx)
+		channels = make([]*amqp.Channel, count)
 
 		for i := 0; i < count; i++ {
 			// Allocate new channel for each consumer.
@@ -119,6 +140,8 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 
 				break
 			}
+
+			channels[i] = consumeChannel
 
 			var once sync.Once
 
@@ -182,13 +205,14 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 
 		cancel()
 	}
+	return nil
 }
 
 // StartConsumer is used to start Consumer.
 //
 // NOTE: It's blocking method.
-func (c *Connector) StartConsumer(ctx context.Context, consumer Consumer) error {
-	return c.StartMultipleConsumers(ctx, consumer, 1)
+func (c *Connector) StartConsumer(ctx context.Context, consumer Consumer, stopCh ...chan struct{}) error {
+	return c.StartMultipleConsumers(ctx, consumer, 1, stopCh...)
 }
 
 // Channel allocate and return new amqp.Channel.
