@@ -1,4 +1,4 @@
-package rabbitroutine_test
+package darkmq_test
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/furdarius/rabbitroutine"
+	darkmq "github.com/sagleft/darkrmq"
 	"github.com/streadway/amqp"
 )
 
@@ -16,15 +16,15 @@ func ExampleFireForgetPublisher() {
 
 	url := "amqp://guest:guest@127.0.0.1:5672/"
 
-	conn := rabbitroutine.NewConnector(rabbitroutine.Config{
+	conn := darkmq.NewConnector(darkmq.Config{
 		// Max reconnect attempts
 		ReconnectAttempts: 20000,
 		// How long wait between reconnect
 		Wait: 2 * time.Second,
 	})
 
-	pool := rabbitroutine.NewLightningPool(conn)
-	pub := rabbitroutine.NewFireForgetPublisher(pool)
+	pool := darkmq.NewLightningPool(conn)
+	pub := darkmq.NewFireForgetPublisher(pool)
 
 	go func() {
 		err := conn.Dial(ctx, url)
@@ -54,16 +54,16 @@ func ExampleEnsurePublisher() {
 
 	url := "amqp://guest:guest@127.0.0.1:5672/"
 
-	conn := rabbitroutine.NewConnector(rabbitroutine.Config{
+	conn := darkmq.NewConnector(darkmq.Config{
 		// Max reconnect attempts
 		ReconnectAttempts: 20000,
 		// How long wait between reconnect
 		Wait: 2 * time.Second,
 	})
 
-	pool := rabbitroutine.NewPool(conn)
-	ensurePub := rabbitroutine.NewEnsurePublisher(pool)
-	pub := rabbitroutine.NewRetryPublisher(ensurePub)
+	pool := darkmq.NewPool(conn)
+	ensurePub := darkmq.NewEnsurePublisher(pool)
+	pub := darkmq.NewRetryPublisher(ensurePub)
 
 	go func() {
 		err := conn.Dial(ctx, url)

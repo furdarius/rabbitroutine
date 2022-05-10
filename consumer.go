@@ -1,7 +1,8 @@
-package rabbitroutine
+package darkmq
 
 import (
 	"context"
+
 	"github.com/streadway/amqp"
 )
 
