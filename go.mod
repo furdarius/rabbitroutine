@@ -1,4 +1,5 @@
-module github.com/furdarius/rabbitroutine
+module github.com/sagleft/darkrmq
+
 
 go 1.15
 

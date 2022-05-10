@@ -1,4 +1,4 @@
-package rabbitroutine
+package darkmq
 
 import "github.com/streadway/amqp"
 

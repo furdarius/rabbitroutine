@@ -1,4 +1,4 @@
-package rabbitroutine_test
+package darkmq_test
 
 import (
 	"context"
@@ -9,17 +9,17 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/furdarius/rabbitroutine"
+	darkmq "github.com/sagleft/darkrmq"
 	"github.com/streadway/amqp"
 )
 
-// Consumer implement rabbitroutine.Consumer interface.
+// Consumer implement darkmq.Consumer interface.
 type Consumer struct {
 	ExchangeName string
 	QueueName    string
 }
 
-// Declare implement rabbitroutine.Consumer.(Declare) interface method.
+// Declare implement darkmq.Consumer.(Declare) interface method.
 func (c *Consumer) Declare(ctx context.Context, ch *amqp.Channel) error {
 	err := ch.ExchangeDeclare(
 		c.ExchangeName, // name
@@ -66,7 +66,7 @@ func (c *Consumer) Declare(ctx context.Context, ch *amqp.Channel) error {
 	return nil
 }
 
-// Consume implement rabbitroutine.Consumer.(Consume) interface method.
+// Consume implement darkmq.Consumer.(Consume) interface method.
 func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
 	defer log.Println("consume method finished")
 
@@ -123,23 +123,23 @@ func ExampleConsumer() {
 
 	url := "amqp://guest:guest@127.0.0.1:5672/"
 
-	conn := rabbitroutine.NewConnector(rabbitroutine.Config{
+	conn := darkmq.NewConnector(darkmq.Config{
 		// Max reconnect attempts
 		ReconnectAttempts: 20,
 		// How long wait between reconnect
 		Wait: 2 * time.Second,
 	})
 
-	conn.AddRetriedListener(func(r rabbitroutine.Retried) {
+	conn.AddRetriedListener(func(r darkmq.Retried) {
 		log.Printf("try to connect to RabbitMQ: attempt=%d, error=\"%v\"",
 			r.ReconnectAttempt, r.Error)
 	})
 
-	conn.AddDialedListener(func(_ rabbitroutine.Dialed) {
+	conn.AddDialedListener(func(_ darkmq.Dialed) {
 		log.Printf("RabbitMQ connection successfully established")
 	})
 
-	conn.AddAMQPNotifiedListener(func(n rabbitroutine.AMQPNotified) {
+	conn.AddAMQPNotifiedListener(func(n darkmq.AMQPNotified) {
 		log.Printf("RabbitMQ error received: %v", n.Error)
 	})
 

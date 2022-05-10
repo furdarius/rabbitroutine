@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/furdarius/rabbitroutine"
+	darkmq "github.com/sagleft/darkrmq"
 	"github.com/streadway/amqp"
 )
 
@@ -15,19 +15,19 @@ func main() {
 
 	url := "amqp://guest:guest@127.0.0.1:5672/"
 
-	conn := rabbitroutine.NewConnector(rabbitroutine.Config{
+	conn := darkmq.NewConnector(darkmq.Config{
 		// Max reconnect attempts
 		ReconnectAttempts: 20,
 		// How long wait between reconnect
 		Wait: 2 * time.Second,
 	})
 
-	pool := rabbitroutine.NewPool(conn)
-	ensurePub := rabbitroutine.NewEnsurePublisher(pool)
-	pub := rabbitroutine.NewRetryPublisher(
+	pool := darkmq.NewPool(conn)
+	ensurePub := darkmq.NewEnsurePublisher(pool)
+	pub := darkmq.NewRetryPublisher(
 		ensurePub,
-		rabbitroutine.PublishMaxAttemptsSetup(16),
-		rabbitroutine.PublishDelaySetup(rabbitroutine.LinearDelay(10*time.Millisecond)),
+		darkmq.PublishMaxAttemptsSetup(16),
+		darkmq.PublishDelaySetup(darkmq.LinearDelay(10*time.Millisecond)),
 	)
 
 	go func() {
