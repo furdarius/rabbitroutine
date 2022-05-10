@@ -1,57 +1,57 @@
 <p align="center"><img src="logo.jpg"></p>
 
-[![PkgGoDev](https://pkg.go.dev/badge/github.com/furdarius/rabbitroutine)](https://pkg.go.dev/github.com/furdarius/rabbitroutine)
-[![Build Status](https://travis-ci.org/furdarius/rabbitroutine.svg?branch=master)](https://travis-ci.org/furdarius/rabbitroutine)
-[![Go Report Card](https://goreportcard.com/badge/github.com/furdarius/rabbitroutine)](https://goreportcard.com/report/github.com/furdarius/rabbitroutine)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/furdarius/darkmq)](https://pkg.go.dev/github.com/furdarius/darkmq)
+[![Build Status](https://travis-ci.org/furdarius/darkmq.svg?branch=master)](https://travis-ci.org/furdarius/darkmq)
+[![Go Report Card](https://goreportcard.com/badge/github.com/furdarius/darkmq)](https://goreportcard.com/report/github.com/furdarius/darkmq)
 
 # Rabbitmq Failover Routine
 
 Lightweight library that handles RabbitMQ auto-reconnect and publishing retry routine for you.
 The library is designed to save the developer from the headache when working with RabbitMQ.
 
-**rabbitroutine** solves your RabbitMQ reconnection problems:
+**darkmq** solves your RabbitMQ reconnection problems:
 * Handles connection errors and channels errors separately.
-* Takes into account the need to [re-declare](https://godoc.org/github.com/furdarius/rabbitroutine#Consumer) entities in RabbitMQ after reconnection.
-* Notifies of [errors](https://godoc.org/github.com/furdarius/rabbitroutine#Connector.AddAMQPNotifiedListener) and connection [retry attempts](https://godoc.org/github.com/furdarius/rabbitroutine#Connector.AddRetriedListener).
-* Supports [FireAndForgetPublisher](https://godoc.org/github.com/furdarius/rabbitroutine#FireForgetPublisher) and [EnsurePublisher](https://godoc.org/github.com/furdarius/rabbitroutine#EnsurePublisher), that can be wrapped with [RetryPublisher](https://godoc.org/github.com/furdarius/rabbitroutine#RetryPublisher).
+* Takes into account the need to [re-declare](https://godoc.org/github.com/furdarius/darkmq#Consumer) entities in RabbitMQ after reconnection.
+* Notifies of [errors](https://godoc.org/github.com/furdarius/darkmq#Connector.AddAMQPNotifiedListener) and connection [retry attempts](https://godoc.org/github.com/furdarius/darkmq#Connector.AddRetriedListener).
+* Supports [FireAndForgetPublisher](https://godoc.org/github.com/furdarius/darkmq#FireForgetPublisher) and [EnsurePublisher](https://godoc.org/github.com/furdarius/darkmq#EnsurePublisher), that can be wrapped with [RetryPublisher](https://godoc.org/github.com/furdarius/darkmq#RetryPublisher).
 * Supports pool of channels used for publishing.
-* Provides channels [pool size](https://godoc.org/github.com/furdarius/rabbitroutine#Pool.Size) statistics.
+* Provides channels [pool size](https://godoc.org/github.com/furdarius/darkmq#Pool.Size) statistics.
 
 **Stop to do wrappers, do features!**
 
 ## Install
 ```
-go get github.com/furdarius/rabbitroutine
+go get github.com/sagleft/darkrmq
 ```
 
 ### Adding as dependency by "go dep"
 ```
-$ dep ensure -add github.com/furdarius/rabbitroutine
+$ dep ensure -add github.com/sagleft/darkrmq
 ```
 
 ## Usage
 
 
 ### Consuming
-You need to implement [Consumer](https://godoc.org/github.com/furdarius/rabbitroutine#Consumer) and register
-it with [StartConsumer](https://godoc.org/github.com/furdarius/rabbitroutine#Connector.StartConsumer)
-or with [StartMultipleConsumers](https://godoc.org/github.com/furdarius/rabbitroutine#Connector.StartMultipleConsumers).
+You need to implement [Consumer](https://godoc.org/github.com/furdarius/darkmq#Consumer) and register
+it with [StartConsumer](https://godoc.org/github.com/furdarius/darkmq#Connector.StartConsumer)
+or with [StartMultipleConsumers](https://godoc.org/github.com/furdarius/darkmq#Connector.StartMultipleConsumers).
 When connection is established (*at first time or after reconnect*) `Declare` method is called. It can be used to
-declare required RabbitMQ entities ([consumer example](https://github.com/furdarius/rabbitroutine/blob/master/consumer_example_test.go)). 
+declare required RabbitMQ entities ([consumer example](https://github.com/furdarius/darkmq/blob/master/consumer_example_test.go)). 
 
 
 Usage example:
 
 ```go
 
-// Consumer declares your own RabbitMQ consumer implementing rabbitroutine.Consumer interface.
+// Consumer declares your own RabbitMQ consumer implementing darkmq.Consumer interface.
 type Consumer struct {}
 func (c *Consumer) Declare(ctx context.Context, ch *amqp.Channel) error {}
 func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel) error {}
 
 url := "amqp://guest:guest@127.0.0.1:5672/"
 
-conn := rabbitroutine.NewConnector(rabbitroutine.Config{
+conn := darkmq.NewConnector(darkmq.Config{
     // How long to wait between reconnect
     Wait: 2 * time.Second,
 })
@@ -74,14 +74,14 @@ go func() {
 }()
 ```
 
-[Full example demonstrates messages consuming](https://github.com/furdarius/rabbitroutine/blob/master/consumer_example_test.go)
+[Full example demonstrates messages consuming](https://github.com/furdarius/darkmq/blob/master/consumer_example_test.go)
 
 
 ### Publishing
 
-For publishing [FireForgetPublisher](https://godoc.org/github.com/furdarius/rabbitroutine#FireForgetPublisher)
-and [EnsurePublisher](https://godoc.org/github.com/furdarius/rabbitroutine#EnsurePublisher) implemented.
-Both of them can be wrapped with [RetryPublisher](https://godoc.org/github.com/furdarius/rabbitroutine#RetryPublisher)
+For publishing [FireForgetPublisher](https://godoc.org/github.com/furdarius/darkmq#FireForgetPublisher)
+and [EnsurePublisher](https://godoc.org/github.com/furdarius/darkmq#EnsurePublisher) implemented.
+Both of them can be wrapped with [RetryPublisher](https://godoc.org/github.com/furdarius/darkmq#RetryPublisher)
 to repeat publishing on errors and mitigate short-term network problems.
 
 Usage example:
@@ -90,17 +90,17 @@ ctx := context.Background()
 
 url := "amqp://guest:guest@127.0.0.1:5672/"
 
-conn := rabbitroutine.NewConnector(rabbitroutine.Config{
+conn := darkmq.NewConnector(darkmq.Config{
     // How long wait between reconnect
     Wait: 2 * time.Second,
 })
 
-pool := rabbitroutine.NewPool(conn)
-ensurePub := rabbitroutine.NewEnsurePublisher(pool)
-pub := rabbitroutine.NewRetryPublisher(
+pool := darkmq.NewPool(conn)
+ensurePub := darkmq.NewEnsurePublisher(pool)
+pub := darkmq.NewRetryPublisher(
     ensurePub,
-    rabbitroutine.PublishMaxAttemptsSetup(16),
-    rabbitroutine.PublishDelaySetup(rabbitroutine.LinearDelay(10*time.Millisecond)),
+    darkmq.PublishMaxAttemptsSetup(16),
+    darkmq.PublishDelaySetup(darkmq.LinearDelay(10*time.Millisecond)),
 )
 
 go conn.Dial(ctx, url)
@@ -112,7 +112,7 @@ if err != nil {
 
 ```
 
-[Full example demonstrates messages publishing](https://github.com/furdarius/rabbitroutine/blob/master/publisher_example_test.go)
+[Full example demonstrates messages publishing](https://github.com/furdarius/darkmq/blob/master/publisher_example_test.go)
 
 ## Contributing
 
