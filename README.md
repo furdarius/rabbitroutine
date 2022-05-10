@@ -1,4 +1,4 @@
-<p align="center"><img src="https://habrastorage.org/webt/-0/x1/z4/-0x1z48ndvvopw_baizloa6r1hs.png"></p>
+<p align="center"><img src="logo.png"></p>
 
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/furdarius/rabbitroutine)](https://pkg.go.dev/github.com/furdarius/rabbitroutine)
 [![Build Status](https://travis-ci.org/furdarius/rabbitroutine.svg?branch=master)](https://travis-ci.org/furdarius/rabbitroutine)
