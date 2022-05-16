@@ -12,7 +12,11 @@ type Consumer interface {
 	// Will be called once before Consume (even when StartMultipleConsumers called).
 	// On any problems with connection or channel RabbitMQ entities will be redeclared.
 	Declare(ctx context.Context, ch *amqp.Channel) error
+
 	// Consume used to consuming RabbitMQ queue.
 	// Can be called 1+ times if you register it with StartMultipleConsumers.
 	Consume(ctx context.Context, ch *amqp.Channel) error
+
+	// GetTag - get consumer tag
+	GetTag() string
 }

@@ -12,6 +12,7 @@ import (
 type Consumer struct {
 	ExchangeName string
 	QueueName    string
+	Tag          string
 }
 
 // Declare implement rabbitroutine.Consumer.(Declare) interface method.
@@ -110,4 +111,9 @@ func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
 			return ctx.Err()
 		}
 	}
+}
+
+// GetTag - get consumer tag
+func (c *Consumer) GetTag() string {
+	return c.Tag
 }
