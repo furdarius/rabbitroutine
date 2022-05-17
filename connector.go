@@ -71,7 +71,7 @@ type consumerChannel struct {
 func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consumer, count int, stopCh ...chan struct{}) error {
 	var lastErr error
 	var reconnectConsumers bool = true
-	var cosumerChannels []consumerChannel
+	var consumerChannels []consumerChannel
 
 	if len(stopCh) > 0 {
 		go func() {
@@ -79,7 +79,7 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 			reconnectConsumers = false
 
 			// close channels
-			for _, consumerChannelData := range cosumerChannels {
+			for _, consumerChannelData := range consumerChannels {
 				if consumerChannelData.Channel == nil {
 					continue
 				}
@@ -136,7 +136,7 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 		var g errgroup.Group
 
 		consumeCtx, cancel := context.WithCancel(ctx)
-		cosumerChannels = make([]consumerChannel, count)
+		consumerChannels = make([]consumerChannel, count)
 
 		for i := 0; i < count; i++ {
 			// Allocate new channel for each consumer.
@@ -150,7 +150,7 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 				break
 			}
 
-			cosumerChannels[i] = consumerChannel{
+			consumerChannels[i] = consumerChannel{
 				Channel:     consumeChannel,
 				ConsumerTag: consumer.GetTag(),
 			}
