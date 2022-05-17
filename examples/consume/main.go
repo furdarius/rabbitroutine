@@ -44,6 +44,7 @@ func main() {
 	consumer := &Consumer{
 		ExchangeName: "myexchange",
 		QueueName:    "myqueue",
+		Tag:          "myconsumer",
 	}
 
 	g.Go(func() error {

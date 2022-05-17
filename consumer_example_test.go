@@ -17,6 +17,7 @@ import (
 type Consumer struct {
 	ExchangeName string
 	QueueName    string
+	Tag          string
 }
 
 // Declare implement darkmq.Consumer.(Declare) interface method.
@@ -82,13 +83,13 @@ func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
 	}
 
 	msgs, err := ch.Consume(
-		c.QueueName,  // queue
-		"myconsumer", // consumer name
-		false,        // auto-ack
-		false,        // exclusive
-		false,        // no-local
-		false,        // no-wait
-		nil,          // args
+		c.QueueName, // queue
+		c.Tag,       // consumer name
+		false,       // auto-ack
+		false,       // exclusive
+		false,       // no-local
+		false,       // no-wait
+		nil,         // args
 	)
 	if err != nil {
 		log.Printf("failed to consume %v: %v", c.QueueName, err)
@@ -115,6 +116,10 @@ func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
 			return ctx.Err()
 		}
 	}
+}
+
+func (c *Consumer) GetTag() string {
+	return c.Tag
 }
 
 // This example demonstrates consuming messages from RabbitMQ queue.
@@ -146,6 +151,7 @@ func ExampleConsumer() {
 	consumer := &Consumer{
 		ExchangeName: "myexch",
 		QueueName:    "myqueue",
+		Tag:          "myconsumer",
 	}
 
 	go func() {

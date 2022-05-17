@@ -56,6 +56,11 @@ func NewConnector(cfg Config) *Connector {
 	}
 }
 
+type consumerChannel struct {
+	Channel     *amqp.Channel
+	ConsumerTag string
+}
+
 // StartMultipleConsumers is used to start Consumer "count" times.
 // Method Declare will be called once, and Consume will be called "count" times (one goroutine per call)
 // so you can scale consumer horizontally.
@@ -66,7 +71,7 @@ func NewConnector(cfg Config) *Connector {
 func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consumer, count int, stopCh ...chan struct{}) error {
 	var lastErr error
 	var reconnectConsumers bool = true
-	var channels []*amqp.Channel = make([]*amqp.Channel, 0)
+	var cosumerChannels []consumerChannel
 
 	if len(stopCh) > 0 {
 		go func() {
@@ -74,13 +79,17 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 			reconnectConsumers = false
 
 			// close channels
-			for _, ch := range channels {
-				if ch == nil {
+			for _, consumerChannelData := range cosumerChannels {
+				if consumerChannelData.Channel == nil {
 					continue
 				}
-				err := ch.Close()
+				/*err := consumerChannelData.Close()
 				if err != nil {
 					lastErr = errors.WithMessage(err, "failed to close channel")
+				}*/
+				err := consumerChannelData.Channel.Cancel(consumerChannelData.ConsumerTag, false)
+				if err != nil {
+					lastErr = errors.WithMessage(err, "failed to cancel consumer")
 				}
 			}
 		}()
@@ -127,7 +136,7 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 		var g errgroup.Group
 
 		consumeCtx, cancel := context.WithCancel(ctx)
-		channels = make([]*amqp.Channel, count)
+		cosumerChannels = make([]consumerChannel, count)
 
 		for i := 0; i < count; i++ {
 			// Allocate new channel for each consumer.
@@ -141,7 +150,10 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 				break
 			}
 
-			channels[i] = consumeChannel
+			cosumerChannels[i] = consumerChannel{
+				Channel:     consumeChannel,
+				ConsumerTag: consumer.GetTag(),
+			}
 
 			var once sync.Once
 
