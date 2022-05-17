@@ -71,6 +71,7 @@ func (c *Connector) startConsumers(task StartConsumersTask) error {
 	var lastErr error
 	var reconnectConsumers bool = true
 	var consumerChannels []consumerChannel
+	var readyOnce bool
 
 	go func() {
 		// wait for stop
@@ -90,6 +91,14 @@ func (c *Connector) startConsumers(task StartConsumersTask) error {
 	}()
 
 	for reconnectConsumers {
+		defer func() {
+			if !readyOnce {
+				// notify that the method is complete
+				readyOnce = true
+				task.Ready <- struct{}{}
+			}
+		}()
+
 		if contextDone(task.Ctx) {
 			return lastErr
 		}
