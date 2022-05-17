@@ -91,14 +91,6 @@ func (c *Connector) startConsumers(task StartConsumersTask) error {
 	}()
 
 	for reconnectConsumers {
-		defer func() {
-			if !readyOnce {
-				// notify that the method is complete
-				readyOnce = true
-				task.Ready <- struct{}{}
-			}
-		}()
-
 		if contextDone(task.Ctx) {
 			return lastErr
 		}
@@ -170,8 +162,13 @@ func (c *Connector) startConsumers(task StartConsumersTask) error {
 				// On consume exit send stop signal to all consumer's goroutines.
 				defer cancel()
 
+				if !readyOnce {
+					// using the channel from the task only once
+					readyOnce = true
+					task.Ready = make(chan struct{}, 1)
+				}
 				// nolint: vetshadow
-				err := task.Consumer.Consume(consumeCtx, consumeChannel)
+				err := task.Consumer.Consume(consumeCtx, consumeChannel, task.Ready)
 				if err != nil {
 					return errors.Wrap(err, "failed to consume")
 				}
