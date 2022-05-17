@@ -165,6 +165,7 @@ func (c *Connector) startConsumers(task StartConsumersTask) error {
 				if !readyOnce {
 					// using the channel from the task only once
 					readyOnce = true
+				} else {
 					task.Ready = make(chan struct{}, 1)
 				}
 				// nolint: vetshadow
