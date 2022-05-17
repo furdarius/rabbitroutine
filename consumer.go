@@ -15,7 +15,7 @@ type Consumer interface {
 
 	// Consume used to consuming RabbitMQ queue.
 	// Can be called 1+ times if you register it with StartMultipleConsumers.
-	Consume(ctx context.Context, ch *amqp.Channel) error
+	Consume(ctx context.Context, ch *amqp.Channel, readyCh chan struct{}) error
 
 	// GetTag - get consumer tag
 	GetTag() string
