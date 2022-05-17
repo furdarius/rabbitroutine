@@ -61,50 +61,44 @@ type consumerChannel struct {
 	ConsumerTag string
 }
 
-// StartMultipleConsumers is used to start Consumer "count" times.
+// startConsumers is used to start Consumer "count" times.
 // Method Declare will be called once, and Consume will be called "count" times (one goroutine per call)
 // so you can scale consumer horizontally.
-// It's blocking method.
-//
 // NOTE: It's blocking method.
+//
 // nolint: gocyclo
-func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consumer, count int, stopCh ...chan struct{}) error {
+func (c *Connector) startConsumers(task StartConsumersTask) error {
 	var lastErr error
 	var reconnectConsumers bool = true
 	var consumerChannels []consumerChannel
 
-	if len(stopCh) > 0 {
-		go func() {
-			<-stopCh[0]
-			reconnectConsumers = false
+	go func() {
+		// wait for stop
+		<-task.Stop
+		reconnectConsumers = false
 
-			// close channels
-			for _, consumerChannelData := range consumerChannels {
-				if consumerChannelData.Channel == nil {
-					continue
-				}
-				/*err := consumerChannelData.Close()
-				if err != nil {
-					lastErr = errors.WithMessage(err, "failed to close channel")
-				}*/
-				err := consumerChannelData.Channel.Cancel(consumerChannelData.ConsumerTag, false)
-				if err != nil {
-					lastErr = errors.WithMessage(err, "failed to cancel consumer")
-				}
+		// close channels
+		for _, consumerChannelData := range consumerChannels {
+			if consumerChannelData.Channel == nil {
+				continue
 			}
-		}()
-	}
+			err := consumerChannelData.Channel.Cancel(consumerChannelData.ConsumerTag, false)
+			if err != nil {
+				lastErr = errors.WithMessage(err, "failed to cancel consumer")
+			}
+		}
+	}()
 
 	for reconnectConsumers {
-		if contextDone(ctx) {
+		if contextDone(task.Ctx) {
 			return lastErr
 		}
 
 		// On error wait for c.cfg.Wait time before consumer restart
 		if lastErr != nil {
 			select {
-			case <-ctx.Done():
-				return ctx.Err()
+			case <-task.Ctx.Done():
+				return task.Ctx.Err()
 			case <-time.After(c.cfg.Wait):
 			}
 		}
@@ -112,14 +106,14 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 		// Use declareChannel only for consumer.Declare,
 		// and close it after successful declaring.
 		// nolint: vetshadow
-		declareChannel, err := c.Channel(ctx)
+		declareChannel, err := c.Channel(task.Ctx)
 		if err != nil {
 			lastErr = errors.WithMessage(err, "failed to get channel")
 
 			continue
 		}
 
-		err = consumer.Declare(ctx, declareChannel)
+		err = task.Consumer.Declare(task.Ctx, declareChannel)
 		if err != nil {
 			lastErr = errors.WithMessage(err, "failed to declare consumer")
 
@@ -135,10 +129,10 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 
 		var g errgroup.Group
 
-		consumeCtx, cancel := context.WithCancel(ctx)
-		consumerChannels = make([]consumerChannel, count)
+		consumeCtx, cancel := context.WithCancel(task.Ctx)
+		consumerChannels = make([]consumerChannel, task.Count)
 
-		for i := 0; i < count; i++ {
+		for i := 0; i < task.Count; i++ {
 			// Allocate new channel for each consumer.
 			// nolint: vetshadow
 			consumeChannel, err := c.Channel(consumeCtx)
@@ -152,7 +146,7 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 
 			consumerChannels[i] = consumerChannel{
 				Channel:     consumeChannel,
-				ConsumerTag: consumer.GetTag(),
+				ConsumerTag: task.Consumer.GetTag(),
 			}
 
 			var once sync.Once
@@ -168,7 +162,7 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 				defer cancel()
 
 				// nolint: vetshadow
-				err := consumer.Consume(consumeCtx, consumeChannel)
+				err := task.Consumer.Consume(consumeCtx, consumeChannel)
 				if err != nil {
 					return errors.Wrap(err, "failed to consume")
 				}
@@ -220,11 +214,47 @@ func (c *Connector) StartMultipleConsumers(ctx context.Context, consumer Consume
 	return nil
 }
 
+type StartConsumersTask struct {
+	// required
+	Ctx      context.Context
+	Consumer Consumer
+	Count    int
+	Stop     chan struct{}
+
+	// optional
+	Ready chan struct{}
+}
+
+// StartMultipleConsumers is used to start Consumer "count" times.
+// Method Declare will be called once, and Consume will be called "count" times (one goroutine per call)
+// so you can scale consumer horizontally.
+func (c *Connector) StartMultipleConsumers(task StartConsumersTask) error {
+	task.Ready = make(chan struct{})
+	var lastError error
+
+	go func() {
+		err := c.startConsumers(task)
+		if err != nil {
+			lastError = err
+			task.Ready <- struct{}{}
+		}
+	}()
+
+	<-task.Ready
+	return lastError
+}
+
 // StartConsumer is used to start Consumer.
 //
 // NOTE: It's blocking method.
-func (c *Connector) StartConsumer(ctx context.Context, consumer Consumer, stopCh ...chan struct{}) error {
-	return c.StartMultipleConsumers(ctx, consumer, 1, stopCh...)
+func (c *Connector) StartConsumer(ctx context.Context, consumer Consumer, stopCh chan struct{}) error {
+	return c.StartMultipleConsumers(StartConsumersTask{
+		Ctx:      ctx,
+		Consumer: consumer,
+		Count:    1,
+		Stop:     stopCh,
+		Ready:    make(chan struct{}),
+	})
 }
 
 // Channel allocate and return new amqp.Channel.
