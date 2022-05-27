@@ -250,13 +250,17 @@ func NewConstantPublisher(p *LightningPool) (*ConstantPublisher, error) {
 	return pub, nil
 }
 
+func checkErrorAboutIDSpace(err error) bool {
+	return strings.Contains(err.Error(), "channel id space")
+}
+
 // Publish sends msg to an exchange on the RabbitMQ.
 func (p *ConstantPublisher) Publish(ctx context.Context, exchange, key string, msg amqp.Publishing) error {
 	mandatory := false
 	immediate := false
 	err := p.ch.Publish(exchange, key, mandatory, immediate, msg)
 	if err != nil {
-		if strings.Contains(err.Error(), "channel id space") {
+		if checkErrorAboutIDSpace(err) {
 			// reopen conn
 			err := p.pool.conn.conn.Close()
 			if err != nil {
