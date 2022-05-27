@@ -142,6 +142,12 @@ func (c *Connector) startConsumers(task StartConsumersTask) error {
 				// and wait before they will be finished.
 				cancel()
 
+				// check error
+				if checkErrorAboutIDSpace(err) {
+					// reopen conn
+					c.conn.Close()
+				}
+
 				break
 			}
 
