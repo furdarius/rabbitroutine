@@ -268,12 +268,25 @@ func checkErrorAboutIDSpace(err error) bool {
 	return strings.Contains(err.Error(), "channel id space")
 }
 
+// check if channel or connections is closed
+func checkErrorAboutCClosed(err error) bool {
+	return strings.Contains(err.Error(), "channel/connection is not open")
+}
+
+func (p *ConstantPublisher) tryPublish(exchange, key string, msg amqp.Publishing) error {
+	return p.ch.Publish(exchange, key, publisherMandatory, publisherImmediate, msg)
+}
+
 // Publish sends msg to an exchange on the RabbitMQ.
 func (p *ConstantPublisher) Publish(ctx context.Context, exchange, key string, msg amqp.Publishing) error {
-	mandatory := false
-	immediate := false
-	err := p.ch.Publish(exchange, key, mandatory, immediate, msg)
+	err := p.tryPublish(exchange, key, msg)
 	if err != nil {
+		if checkErrorAboutCClosed(err) {
+			p.ch, err = p.pool.Channel(context.Background())
+			if err != nil {
+				return errors.Wrap(err, "failed to get new channel from pool to publish msg")
+			}
+		}
 		if checkErrorAboutIDSpace(err) {
 			// reopen conn
 			err := p.pool.conn.conn.Close()
@@ -283,7 +296,7 @@ func (p *ConstantPublisher) Publish(ctx context.Context, exchange, key string, m
 
 			// next try
 			time.Sleep(sleepBeforeReconnect)
-			err = p.ch.Publish(exchange, key, mandatory, immediate, msg)
+			err = p.tryPublish(exchange, key, msg)
 			if err != nil {
 				return errors.Wrap(err, "failed to publish message after reopen conn")
 			}
