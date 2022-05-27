@@ -68,7 +68,7 @@ func (c *Consumer) Declare(ctx context.Context, ch *amqp.Channel) error {
 }
 
 // Consume implement darkmq.Consumer.(Consume) interface method.
-func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
+func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel, stopCh chan struct{}) error {
 	defer log.Println("consume method finished")
 
 	err := ch.Qos(
@@ -162,7 +162,11 @@ func ExampleConsumer() {
 	}()
 
 	go func() {
-		err := conn.StartMultipleConsumers(ctx, consumer, 5)
+		err := conn.StartMultipleConsumers(darkmq.StartConsumersTask{
+			Ctx:      ctx,
+			Consumer: consumer,
+			Count:    5,
+		})
 		if err != nil {
 			log.Println("failed to start consumer:", err)
 		}
