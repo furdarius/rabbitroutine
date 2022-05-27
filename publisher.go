@@ -243,6 +243,20 @@ func NewConstantPublisher(p *LightningPool) (*ConstantPublisher, error) {
 	var err error
 	pub.ch, err = p.Channel(context.Background())
 	if err != nil {
+		if checkErrorAboutIDSpace(err) {
+			// reopen channel
+			err := p.conn.conn.Close()
+			if err != nil {
+				return nil, errors.New("failed to close (reopen) conn to get publisher channel: " + err.Error())
+			}
+
+			// retry
+			time.Sleep(sleepBeforeReconnect)
+			pub.ch, err = p.Channel(context.Background())
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to get channel for publisher (after conn reopen)")
+			}
+		}
 		return nil, errors.Wrap(err, "failed to get channel for publisher")
 	}
 
@@ -268,7 +282,7 @@ func (p *ConstantPublisher) Publish(ctx context.Context, exchange, key string, m
 			}
 
 			// next try
-			time.Sleep(time.Millisecond * 100)
+			time.Sleep(sleepBeforeReconnect)
 			err = p.ch.Publish(exchange, key, mandatory, immediate, msg)
 			if err != nil {
 				return errors.Wrap(err, "failed to publish message after reopen conn")
