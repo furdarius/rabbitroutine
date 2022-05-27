@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -223,4 +224,54 @@ func LinearDelay(delay time.Duration) RetryDelayFunc {
 	}
 
 	return fn
+}
+
+// ConstantPublisher based on FireForgetPublisher
+type ConstantPublisher struct {
+	pool *LightningPool
+	ch   *amqp.Channel
+}
+
+// NewConstantPublisher returns a new instance of ConstantPublisher.
+func NewConstantPublisher(p *LightningPool) (*ConstantPublisher, error) {
+	// create publisher
+	pub := &ConstantPublisher{
+		pool: p,
+	}
+
+	// get channel
+	var err error
+	pub.ch, err = p.Channel(context.Background())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get channel for publisher")
+	}
+
+	p.Release(pub.ch)
+	return pub, nil
+}
+
+// Publish sends msg to an exchange on the RabbitMQ.
+func (p *ConstantPublisher) Publish(ctx context.Context, exchange, key string, msg amqp.Publishing) error {
+	mandatory := false
+	immediate := false
+	err := p.ch.Publish(exchange, key, mandatory, immediate, msg)
+	if err != nil {
+		if strings.Contains(err.Error(), "channel id space") {
+			// reopen conn
+			err := p.pool.conn.conn.Close()
+			if err != nil {
+				return errors.New("failed to close (reopen) conn: " + err.Error())
+			}
+
+			// next try
+			time.Sleep(time.Millisecond * 100)
+			err = p.ch.Publish(exchange, key, mandatory, immediate, msg)
+			if err != nil {
+				return errors.Wrap(err, "failed to publish message after reopen conn")
+			}
+		}
+		return errors.Wrap(err, "failed to publish message")
+	}
+
+	return nil
 }
