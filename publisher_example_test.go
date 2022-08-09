@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/furdarius/rabbitroutine"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // This example demonstrates publishing messages in RabbitMQ exchange using FireForgetPublisher.
