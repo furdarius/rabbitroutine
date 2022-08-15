@@ -2,7 +2,7 @@ package rabbitroutine
 
 import (
 	"context"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // Consumer interface provides functionality of rabbit entity Declaring and queue consuming.

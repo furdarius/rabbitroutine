@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/furdarius/rabbitroutine"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // Consumer implement rabbitroutine.Consumer interface.

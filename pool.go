@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // ChannelKeeper stores AMQP Channel with Confirmation and Close chans.
