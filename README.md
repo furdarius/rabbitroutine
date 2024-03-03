@@ -17,19 +17,12 @@ The library is designed to save the developer from the headache when working wit
 * Supports pool of channels used for publishing.
 * Provides channels [pool size](https://godoc.org/github.com/furdarius/rabbitroutine#Pool.Size) statistics.
 
-**Stop to do wrappers, do features!**
 
-## Install
+## Usage
+
 ```
 go get github.com/furdarius/rabbitroutine
 ```
-
-### Adding as dependency by "go dep"
-```
-$ dep ensure -add github.com/furdarius/rabbitroutine
-```
-
-## Usage
 
 
 ### Consuming
@@ -119,9 +112,14 @@ if err != nil {
 Pull requests are very much welcomed.  Create your pull request, make sure a test or example is included that covers your change and
 your commits represent coherent changes that include a reason for the change.
 
-To run the integration tests, make sure you have RabbitMQ running on any host (e.g with `docker run --net=host -it --rm rabbitmq`), then
-export the environment variable `AMQP_URL=amqp://host/` and run `go test -tags
-integration`. As example:
+To run the integration tests, make sure you have RabbitMQ running on any host
+```
+docker run -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3.13-management
+```
+
+Then export the environment variable `AMQP_URL=amqp://host/` and run `go test -tags
+integration`.
+
 ```
 AMQP_URL=amqp://guest:guest@127.0.0.1:5672/ go test -v -race -cpu=1,2 -tags integration -timeout 5s
 ```
@@ -130,5 +128,3 @@ Use [golangci-lint](https://github.com/golangci/golangci-lint) to check code wit
 ```
 golangci-lint run ./...
 ```
-
-TravisCI will also run the integration tests and golangci-lint.
