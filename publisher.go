@@ -77,7 +77,7 @@ func (p *EnsurePublisher) publish(ctx context.Context, k ChannelKeeper, exchange
 
 	mandatory := true
 	immediate := false
-	err := ch.Publish(exchange, key, mandatory, immediate, msg)
+	err := ch.PublishWithContext(ctx, exchange, key, mandatory, immediate, msg)
 	if err != nil {
 		return errors.Wrap(err, "failed to publish message")
 	}
@@ -127,7 +127,7 @@ func (p *FireForgetPublisher) Publish(ctx context.Context, exchange, key string,
 
 	mandatory := false
 	immediate := false
-	err = ch.Publish(exchange, key, mandatory, immediate, msg)
+	err = ch.PublishWithContext(ctx, exchange, key, mandatory, immediate, msg)
 	if err != nil {
 		_ = ch.Close() //nolint: gosec
 
