@@ -1,0 +1,52 @@
+name: Go
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+  pull_request:
+    branches: ['*']
+
+permissions:
+  contents: read
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go: ["1.21.x", "1.22.x"]
+        include:
+        - go: 1.22.x
+    services:
+      rabbitmq:
+        image: rabbitmq:3.13
+        ports:
+          - 5672:5672
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ matrix.go }}
+        cache-dependency-path: '**/go.sum'
+
+    - name: Download Dependencies
+      run: |
+        go mod download
+
+    - name: Test
+      env:
+        AMQP_URL: amqp://guest:guest@127.0.0.1:5672/
+      run: go test -v -race -cpu=1,2 -tags integration -timeout 5s -coverprofile=coverage.out -covermode=atomic
+
+    - name: Upload coverage reports to Codecov.io
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        slug: furdarius/rabbitroutine
+
